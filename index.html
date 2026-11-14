@@ -7,30 +7,59 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #0d0f1a; --bg2: #131629; --bg3: #1a1e35; --card: #1e2340;
-    --card-hover: #252b4a; --border: #2d3358; --accent: #7c5cfc;
+    --bg: #0d0f1a; --bg2: #131629cc; --bg3: #1a1e35cc; --card: #1e2340cc;
+    --card-hover: #252b4acc; --border: #2d3358; --accent: #7c5cfc;
     --accent2: #a78bfa; --accent-glow: rgba(124,92,252,0.25);
     --text: #e8eaf6; --text2: #9095b5; --text3: #5a6080;
     --done: #22c55e; --done-bg: rgba(34,197,94,0.12); --del: #f43f5e;
     --tab-anime: #f97316; --tab-games: #06b6d4; --tab-series: #a855f7; --tab-films: #ec4899;
-    --r: 12px; box-sizing: border-box;
+    --r: 12px;
+    box-sizing: border-box;
   }
   *, *::before, *::after { box-sizing: inherit; }
-  html, body { margin: 0; padding: 0; height: 100%; background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; font-size: 15px; }
-  #app { display: flex; flex-direction: column; height: 100dvh; max-width: 480px; margin: 0 auto; background: var(--bg); }
-  header { padding: 14px 20px 10px; background: var(--bg2); border-bottom: 1px solid var(--border); }
-  .header-row { display: flex; align-items: center; justify-content: space-between; }
+  html, body { margin: 0; padding: 0; min-height: 100%; background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; font-size: 15px; }
+
+  /* BG */
+  #bgLayer { position: fixed; inset: 0; z-index: 0; background-size: cover; background-position: center; background-repeat: no-repeat; transition: opacity .4s; }
+  #bgLayer.has-bg { background-color: transparent; }
+  body { position: relative; }
+
+  /* LAYOUT */
+  #app { position: relative; z-index: 1; display: flex; flex-direction: column; min-height: 100dvh; }
+
+  /* DESKTOP WRAPPER */
+  .desktop-wrap { display: flex; flex-direction: column; width: 100%; max-width: 860px; margin: 0 auto; flex: 1; }
+  @media(min-width:700px) {
+    .desktop-wrap { padding: 24px 24px 40px; gap: 0; }
+  }
+
+  /* HEADER */
+  header { background: var(--bg2); border-bottom: 1px solid var(--border); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); padding: 14px 20px 10px; position: sticky; top: 0; z-index: 5; }
+  @media(min-width:700px) { header { border-radius: 16px 16px 0 0; padding: 16px 28px 12px; } }
+  .header-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
   .logo { font-size: 20px; font-weight: 700; letter-spacing: -0.5px; }
   .logo span { color: var(--accent2); }
+  .header-right { display: flex; align-items: center; gap: 10px; }
   .sync-row { display: flex; align-items: center; gap: 7px; }
   .sync-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--text3); flex-shrink: 0; }
   .sync-dot.live { background: var(--done); box-shadow: 0 0 6px var(--done); }
   .sync-dot.loading { background: var(--accent); animation: pulse 1s infinite; }
   .sync-dot.error { background: var(--del); }
   .sync-label { font-size: 11px; color: var(--text3); }
-  .tabs { display: grid; grid-template-columns: repeat(4,1fr); gap: 1px; background: var(--border); border-top: 1px solid var(--border); }
-  .tab { padding: 10px 4px 8px; text-align: center; cursor: pointer; background: var(--bg2); font-size: 11px; font-weight: 600; color: var(--text3); display: flex; flex-direction: column; align-items: center; gap: 3px; transition: color .2s, background .2s; user-select: none; }
-  .tab .icon { font-size: 18px; }
+  .icon-btn { background: none; border: none; cursor: pointer; color: var(--text3); font-size: 18px; padding: 4px 6px; border-radius: 8px; transition: color .2s, background .2s; }
+  .icon-btn:hover { color: var(--text); background: var(--border); }
+
+  /* TABS */
+  .tabs { display: grid; grid-template-columns: repeat(4,1fr); gap: 1px; background: var(--border); }
+  @media(min-width:700px) { .tabs { gap: 0; background: none; border-bottom: 1px solid var(--border); } }
+  .tab { padding: 10px 4px 8px; text-align: center; cursor: pointer; background: var(--bg2); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); font-size: 11px; font-weight: 600; color: var(--text3); display: flex; flex-direction: column; align-items: center; gap: 3px; transition: color .2s, background .2s; user-select: none; position: relative; }
+  @media(min-width:700px) {
+    .tab { flex-direction: row; gap: 8px; padding: 12px 20px; font-size: 13px; justify-content: center; }
+    .tab .icon { font-size: 16px; }
+  }
+  .tab .icon { font-size: 20px; display: flex; align-items: center; justify-content: center; }
+  .tab .icon img { width: 22px; height: 22px; object-fit: cover; border-radius: 4px; }
+  @media(min-width:700px) { .tab .icon img { width: 18px; height: 18px; } }
   .tab.active { background: var(--bg3); }
   .tab[data-cat="anime"].active  { color: var(--tab-anime);  border-top: 2px solid var(--tab-anime); }
   .tab[data-cat="games"].active  { color: var(--tab-games);  border-top: 2px solid var(--tab-games); }
@@ -38,19 +67,38 @@
   .tab[data-cat="films"].active  { color: var(--tab-films);  border-top: 2px solid var(--tab-films); }
   .tab .badge { background: var(--accent); color: #fff; border-radius: 20px; font-size: 10px; padding: 1px 6px; min-width: 18px; display: none; }
   .tab .badge.show { display: inline-block; }
-  .content { flex: 1; overflow-y: auto; padding: 16px 16px 90px; }
-  .filter-row { display: flex; gap: 8px; margin-bottom: 14px; overflow-x: auto; padding-bottom: 2px; scrollbar-width: none; }
-  .filter-row::-webkit-scrollbar { display: none; }
-  .filter-btn { padding: 5px 12px; border-radius: 20px; border: 1px solid var(--border); background: none; color: var(--text2); font-size: 12px; font-weight: 500; cursor: pointer; white-space: nowrap; font-family: inherit; transition: background .15s, color .15s, border-color .15s; }
-  .filter-btn.active { background: var(--accent-glow); border-color: var(--accent); color: var(--accent2); }
-  .fab { position: fixed; bottom: 20px; right: calc(50% - 224px); width: 54px; height: 54px; border-radius: 50%; background: var(--accent); color: #fff; border: none; font-size: 26px; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 20px var(--accent-glow); transition: transform .15s; z-index: 10; }
+
+  /* BODY */
+  .body-wrap { display: flex; flex: 1; background: var(--bg2); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+  @media(min-width:700px) { .body-wrap { border-radius: 0 0 16px 16px; border: 1px solid var(--border); border-top: none; } }
+
+  /* CONTENT */
+  .content { flex: 1; padding: 20px 16px 90px; max-width: 100%; }
+  @media(min-width:700px) { .content { padding: 24px 28px 60px; } }
+
+  /* FAB */
+  .fab { position: fixed; bottom: 24px; right: 24px; width: 54px; height: 54px; border-radius: 50%; background: var(--accent); color: #fff; border: none; font-size: 26px; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 20px var(--accent-glow); transition: transform .15s; z-index: 10; }
+  @media(min-width:700px) { .fab { bottom: 40px; right: calc(50% - 430px + 24px); width: 50px; height: 50px; font-size: 22px; } }
   .fab:active { transform: scale(.93); }
-  @media(max-width:480px) { .fab { right: 16px; } }
-  .fab[data-cat="anime"]  { background: var(--tab-anime);  box-shadow: 0 4px 20px rgba(249,115,22,.3); }
-  .fab[data-cat="games"]  { background: var(--tab-games);  box-shadow: 0 4px 20px rgba(6,182,212,.3); }
-  .fab[data-cat="series"] { background: var(--tab-series); box-shadow: 0 4px 20px rgba(168,85,247,.3); }
-  .fab[data-cat="films"]  { background: var(--tab-films);  box-shadow: 0 4px 20px rgba(236,72,153,.3); }
-  .item { background: var(--card); border-radius: var(--r); margin-bottom: 10px; display: flex; align-items: center; gap: 12px; padding: 13px 14px; border: 1px solid transparent; }
+  .fab[data-cat="anime"]  { background: var(--tab-anime);  box-shadow: 0 4px 20px rgba(249,115,22,.35); }
+  .fab[data-cat="games"]  { background: var(--tab-games);  box-shadow: 0 4px 20px rgba(6,182,212,.35); }
+  .fab[data-cat="series"] { background: var(--tab-series); box-shadow: 0 4px 20px rgba(168,85,247,.35); }
+  .fab[data-cat="films"]  { background: var(--tab-films);  box-shadow: 0 4px 20px rgba(236,72,153,.35); }
+
+  /* FILTER */
+  .filter-row { display: flex; gap: 8px; margin-bottom: 16px; overflow-x: auto; padding-bottom: 2px; scrollbar-width: none; }
+  .filter-row::-webkit-scrollbar { display: none; }
+  .filter-btn { padding: 5px 14px; border-radius: 20px; border: 1px solid var(--border); background: none; color: var(--text2); font-size: 12px; font-weight: 500; cursor: pointer; white-space: nowrap; font-family: inherit; transition: background .15s, color .15s, border-color .15s; }
+  .filter-btn.active { background: var(--accent-glow); border-color: var(--accent); color: var(--accent2); }
+
+  /* GRID on desktop */
+  #list { display: grid; grid-template-columns: 1fr; gap: 10px; }
+  @media(min-width:700px) { #list { grid-template-columns: repeat(2,1fr); } }
+  @media(min-width:1100px) { #list { grid-template-columns: repeat(3,1fr); } }
+
+  /* ITEM */
+  .item { background: var(--card); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border-radius: var(--r); display: flex; align-items: center; gap: 12px; padding: 13px 14px; border: 1px solid transparent; transition: background .15s, transform .1s; }
+  .item:hover { background: var(--card-hover); }
   .item.done { background: var(--done-bg); border-color: rgba(34,197,94,.2); }
   .check { width: 26px; height: 26px; border-radius: 50%; border: 2px solid var(--border); cursor: pointer; flex-shrink: 0; display: flex; align-items: center; justify-content: center; transition: border-color .2s, background .2s; font-size: 13px; }
   .item.done .check { background: var(--done); border-color: var(--done); }
@@ -61,16 +109,20 @@
   .item-actions { display: flex; gap: 6px; flex-shrink: 0; }
   .btn-icon { width: 32px; height: 32px; border-radius: 8px; border: none; cursor: pointer; font-size: 15px; display: flex; align-items: center; justify-content: center; background: var(--bg3); color: var(--text2); transition: background .15s; }
   .btn-icon.del:hover { background: rgba(244,63,94,.15); color: var(--del); }
+
+  /* EMPTY */
   .empty { text-align: center; padding: 60px 20px 40px; color: var(--text3); }
-  .empty .empty-icon { font-size: 48px; margin-bottom: 12px; }
+  .empty .empty-icon { font-size: 52px; margin-bottom: 12px; }
   .empty p { margin: 0; font-size: 14px; line-height: 1.6; }
+
   /* SETUP */
-  .setup { padding: 24px 20px; display: none; flex-direction: column; gap: 14px; overflow-y: auto; }
-  .setup.visible { display: flex; }
-  .setup h2 { margin: 0 0 4px; font-size: 18px; }
-  .setup p { margin: 0; font-size: 13px; color: var(--text2); line-height: 1.6; }
-  .setup ol { margin: 0; padding-left: 20px; font-size: 13px; color: var(--text2); line-height: 2; }
-  .setup ol a { color: var(--accent2); }
+  .setup-wrap { flex: 1; padding: 24px 20px 40px; display: none; flex-direction: column; gap: 14px; overflow-y: auto; background: var(--bg2); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+  @media(min-width:700px) { .setup-wrap { padding: 32px 40px 40px; border-radius: 0 0 16px 16px; border: 1px solid var(--border); border-top: none; max-width: 560px; margin: 0 auto; width: 100%; } }
+  .setup-wrap.visible { display: flex; }
+  .setup-wrap h2 { margin: 0 0 4px; font-size: 18px; }
+  .setup-wrap p { margin: 0; font-size: 13px; color: var(--text2); line-height: 1.6; }
+  .setup-wrap ol { margin: 0; padding-left: 20px; font-size: 13px; color: var(--text2); line-height: 2.2; }
+  .setup-wrap ol a { color: var(--accent2); }
   .setup-field { display: flex; flex-direction: column; gap: 6px; }
   .setup-field label { font-size: 12px; font-weight: 600; color: var(--text2); }
   .setup-field input { background: var(--bg3); border: 1px solid var(--border); border-radius: 10px; color: var(--text); font-family: inherit; font-size: 14px; padding: 11px 14px; outline: none; transition: border-color .2s; }
@@ -81,11 +133,44 @@
   .sep { height: 1px; background: var(--border); margin: 2px 0; }
   .info-box { background: var(--bg3); border-radius: 10px; padding: 12px 14px; font-size: 12px; color: var(--text2); line-height: 1.7; border: 1px solid var(--border); }
   .info-box b { color: var(--accent2); }
+
+  /* CUSTOMIZATION PANEL */
+  .custom-panel { position: fixed; top: 0; right: -360px; width: 340px; height: 100dvh; background: #131629f0; backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-left: 1px solid var(--border); z-index: 30; transition: right .3s cubic-bezier(.4,0,.2,1); display: flex; flex-direction: column; overflow: hidden; }
+  .custom-panel.open { right: 0; }
+  @media(min-width:700px) { .custom-panel { width: 360px; } }
+  .custom-header { padding: 18px 20px 14px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+  .custom-header h3 { margin: 0; font-size: 16px; }
+  .custom-body { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 20px; }
+  .custom-section { display: flex; flex-direction: column; gap: 10px; }
+  .custom-section-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .8px; color: var(--text3); }
+  .custom-row { display: flex; align-items: center; gap: 12px; }
+  .custom-label { font-size: 13px; color: var(--text2); flex: 1; }
+  .upload-btn { padding: 7px 14px; border-radius: 8px; border: 1px dashed var(--border); background: var(--bg3); color: var(--text2); font-size: 12px; font-weight: 500; cursor: pointer; font-family: inherit; transition: border-color .2s, color .2s; white-space: nowrap; }
+  .upload-btn:hover { border-color: var(--accent); color: var(--accent2); }
+  .icon-preview { width: 36px; height: 36px; border-radius: 8px; object-fit: cover; display: none; border: 1px solid var(--border); }
+  .icon-preview.show { display: block; }
+  .reset-btn { padding: 5px 10px; border-radius: 6px; border: none; background: rgba(244,63,94,.12); color: var(--del); font-size: 11px; cursor: pointer; font-family: inherit; }
+  .bg-preview-wrap { position: relative; }
+  .bg-preview { width: 100%; height: 80px; border-radius: 10px; object-fit: cover; display: none; border: 1px solid var(--border); }
+  .bg-preview.show { display: block; }
+  .opacity-row { display: flex; align-items: center; gap: 10px; }
+  .opacity-row input[type=range] { flex: 1; accent-color: var(--accent); }
+  .opacity-val { font-size: 12px; color: var(--text2); min-width: 32px; text-align: right; }
+  .blur-row { display: flex; align-items: center; gap: 10px; }
+  .blur-row input[type=range] { flex: 1; accent-color: var(--accent); }
+
+  /* OVERLAY dimmer */
+  .panel-dim { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 29; }
+  .panel-dim.show { display: block; }
+
   /* MODAL */
   .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.7); z-index: 20; align-items: flex-end; justify-content: center; backdrop-filter: blur(4px); }
   .overlay.open { display: flex; }
-  .modal { background: var(--bg2); border-radius: 20px 20px 0 0; width: 100%; max-width: 480px; padding: 24px 20px 32px; border-top: 1px solid var(--border); animation: slideup .2s ease; }
+  @media(min-width:700px) { .overlay { align-items: center; } }
+  .modal { background: #1a1e35; border-radius: 20px 20px 0 0; width: 100%; max-width: 480px; padding: 24px 20px 32px; border-top: 1px solid var(--border); animation: slideup .2s ease; }
+  @media(min-width:700px) { .modal { border-radius: 20px; border: 1px solid var(--border); padding: 28px 28px 28px; } }
   @keyframes slideup { from { transform: translateY(60px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+  @media(min-width:700px) { @keyframes slideup { from { transform: scale(.95); opacity: 0; } to { transform: scale(1); opacity: 1; } } }
   .modal-title { font-size: 17px; font-weight: 700; margin-bottom: 18px; }
   .field { margin-bottom: 14px; }
   .field label { display: block; font-size: 12px; font-weight: 600; color: var(--text2); margin-bottom: 6px; }
@@ -99,68 +184,191 @@
   .btn:active { opacity: .8; }
   .btn:disabled { opacity: .5; cursor: default; }
   @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+  /* hidden file inputs */
+  input[type=file] { display: none; }
 </style>
 </head>
 <body>
+<div id="bgLayer"></div>
+
 <div id="app">
-  <header>
-    <div class="header-row">
-      <div class="logo">наш <span>список</span></div>
-      <div class="sync-row">
-        <div id="syncDot" class="sync-dot loading"></div>
-        <span id="syncLabel" class="sync-label">настройка...</span>
-        <button onclick="resetSettings()" title="Сбросить настройки" style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:13px;padding:2px 4px;margin-left:4px;">⚙️</button>
+  <div class="desktop-wrap">
+    <header>
+      <div class="header-row">
+        <div class="logo">наш <span>список</span></div>
+        <div class="header-right">
+          <div class="sync-row">
+            <div id="syncDot" class="sync-dot loading"></div>
+            <span id="syncLabel" class="sync-label">настройка...</span>
+          </div>
+          <button class="icon-btn" onclick="toggleCustom()" title="Кастомизация">🎨</button>
+          <button class="icon-btn" onclick="resetSettings()" title="Настройки подключения">⚙️</button>
+        </div>
+      </div>
+    </header>
+
+    <!-- SETUP -->
+    <div class="setup-wrap" id="setupScreen">
+      <h2>⚙️ Первый запуск</h2>
+      <p>Для синхронизации между двумя людьми нужен бесплатный JSONBin.io аккаунт.</p>
+      <div class="sep"></div>
+      <div class="info-box">
+        <b>Первый человек:</b> создаёт Bin, получает Bin ID, отправляет его второму.<br>
+        <b>Второй человек:</b> вводит тот же API Key и Bin ID — и оба видят один список.
+      </div>
+      <ol>
+        <li>Зайди на <a href="https://jsonbin.io" target="_blank">jsonbin.io</a> → <strong>Sign Up</strong></li>
+        <li>После входа → <strong>API Keys</strong> → скопируй Secret Key</li>
+        <li>Вставь ниже и нажми «Подключить»</li>
+      </ol>
+      <div class="setup-field">
+        <label>SECRET KEY с jsonbin.io</label>
+        <input id="apiKeyInput" type="password" placeholder="$2a$10$xxxxxxxxxxxxxxxxxxxxxxx..." autocomplete="off">
+        <small>Хранится только в этом браузере</small>
+      </div>
+      <div class="setup-field" id="binFieldWrap" style="display:none">
+        <label>BIN ID <span style="font-weight:400;color:var(--text3)">(есть — вставь; нет — оставь пустым)</span></label>
+        <input id="binIdInput" placeholder="6xxxxxxxxxxxxxxxxxxxxxxx">
+        <small>Второй человек вводит тот же Bin ID что и первый</small>
+      </div>
+      <button class="btn-setup" id="connectBtn" onclick="connectBin()">Подключить</button>
+      <p id="setupError" style="color:var(--del);font-size:13px;display:none;margin:0"></p>
+    </div>
+
+    <!-- MAIN -->
+    <div id="mainApp" style="display:none; flex-direction:column; flex:1;">
+      <nav class="tabs">
+        <div class="tab active" data-cat="anime" onclick="setTab('anime')">
+          <span class="icon" id="icon-anime">🎌</span><span class="tab-label">Аниме</span>
+          <span class="badge" id="badge-anime"></span>
+        </div>
+        <div class="tab" data-cat="games" onclick="setTab('games')">
+          <span class="icon" id="icon-games">🎮</span><span class="tab-label">Игры</span>
+          <span class="badge" id="badge-games"></span>
+        </div>
+        <div class="tab" data-cat="series" onclick="setTab('series')">
+          <span class="icon" id="icon-series">📺</span><span class="tab-label">Сериалы</span>
+          <span class="badge" id="badge-series"></span>
+        </div>
+        <div class="tab" data-cat="films" onclick="setTab('films')">
+          <span class="icon" id="icon-films">🎬</span><span class="tab-label">Фильмы</span>
+          <span class="badge" id="badge-films"></span>
+        </div>
+      </nav>
+      <div class="body-wrap">
+        <div class="content" id="content">
+          <div class="filter-row">
+            <button class="filter-btn active" onclick="setFilter('all',this)">Все</button>
+            <button class="filter-btn" onclick="setFilter('todo',this)">Не смотрели</button>
+            <button class="filter-btn" onclick="setFilter('done',this)">Просмотрено</button>
+          </div>
+          <div id="list"></div>
+        </div>
       </div>
     </div>
-  </header>
 
-  <!-- SETUP SCREEN -->
-  <div class="setup" id="setupScreen">
-    <h2>⚙️ Первый запуск</h2>
-    <p>Для синхронизации между двумя людьми нужен бесплатный JSONBin.io аккаунт. Это займёт 2 минуты.</p>
-    <div class="sep"></div>
-    <div class="info-box">
-      <b>Первый человек:</b> создаёт Bin, получает Bin ID, отправляет его второму.<br>
-      <b>Второй человек:</b> вводит тот же API Key и Bin ID — и оба видят один список.
-    </div>
-    <ol>
-      <li>Зайди на <a href="https://jsonbin.io" target="_blank">jsonbin.io</a> → <strong>Sign Up</strong></li>
-      <li>После входа → <strong>API Keys</strong> → скопируй Secret Key</li>
-      <li>Вставь ниже и нажми «Подключить»</li>
-    </ol>
-    <div class="setup-field">
-      <label>SECRET KEY с jsonbin.io</label>
-      <input id="apiKeyInput" type="password" placeholder="$2a$10$xxxxxxxxxxxxxxxxxxxxxxx..." autocomplete="off">
-      <small>Хранится только в этом браузере</small>
-    </div>
-    <div class="setup-field" id="binFieldWrap" style="display:none">
-      <label>BIN ID <span style="font-weight:400;color:var(--text3)">(есть — вставь; нет — оставь пустым, создастся новый)</span></label>
-      <input id="binIdInput" placeholder="6xxxxxxxxxxxxxxxxxxxxxxx">
-      <small>Второй человек вводит тот же Bin ID что и первый</small>
-    </div>
-    <button class="btn-setup" id="connectBtn" onclick="connectBin()">Подключить</button>
-    <p id="setupError" style="color:var(--del);font-size:13px;display:none;margin:0"></p>
-  </div>
-
-  <!-- MAIN APP -->
-  <div id="mainApp" style="display:none; flex-direction:column; flex:1; overflow:hidden;">
-    <nav class="tabs">
-      <div class="tab active" data-cat="anime" onclick="setTab('anime')"><span class="icon">🎌</span>Аниме<span class="badge" id="badge-anime"></span></div>
-      <div class="tab" data-cat="games" onclick="setTab('games')"><span class="icon">🎮</span>Игры<span class="badge" id="badge-games"></span></div>
-      <div class="tab" data-cat="series" onclick="setTab('series')"><span class="icon">📺</span>Сериалы<span class="badge" id="badge-series"></span></div>
-      <div class="tab" data-cat="films" onclick="setTab('films')"><span class="icon">🎬</span>Фильмы<span class="badge" id="badge-films"></span></div>
-    </nav>
-    <div class="content" id="content">
-      <div class="filter-row">
-        <button class="filter-btn active" onclick="setFilter('all',this)">Все</button>
-        <button class="filter-btn" onclick="setFilter('todo',this)">Не смотрели</button>
-        <button class="filter-btn" onclick="setFilter('done',this)">Просмотрено</button>
-      </div>
-      <div id="list"></div>
-    </div>
     <button class="fab" id="fab" data-cat="anime" onclick="openModal()">+</button>
   </div>
 </div>
+
+<!-- CUSTOM PANEL -->
+<div class="panel-dim" id="panelDim" onclick="toggleCustom()"></div>
+<div class="custom-panel" id="customPanel">
+  <div class="custom-header">
+    <h3>🎨 Кастомизация</h3>
+    <button class="icon-btn" onclick="toggleCustom()">✕</button>
+  </div>
+  <div class="custom-body">
+
+    <!-- BG -->
+    <div class="custom-section">
+      <div class="custom-section-title">Фон</div>
+      <img id="bgPreview" class="bg-preview" alt="фон">
+      <div class="custom-row">
+        <button class="upload-btn" onclick="document.getElementById('bgFile').click()">📁 Загрузить фото / GIF</button>
+        <button class="reset-btn" onclick="removeBg()">Убрать</button>
+      </div>
+      <input type="file" id="bgFile" accept="image/*,.gif" onchange="loadBg(this)">
+      <div class="opacity-row">
+        <span style="font-size:12px;color:var(--text2)">Яркость фона</span>
+        <input type="range" id="bgOpacity" min="0" max="100" value="100" oninput="updateBgOpacity(this.value)">
+        <span class="opacity-val" id="bgOpacityVal">100%</span>
+      </div>
+      <div class="blur-row">
+        <span style="font-size:12px;color:var(--text2)">Размытие карточек</span>
+        <input type="range" id="blurAmount" min="0" max="20" value="12" oninput="updateBlur(this.value)">
+        <span class="opacity-val" id="blurVal">12px</span>
+      </div>
+    </div>
+
+    <div class="sep"></div>
+
+    <!-- ICONS -->
+    <div class="custom-section">
+      <div class="custom-section-title">Иконки вкладок</div>
+
+      <div class="custom-row">
+        <span class="icon" id="previewIcon-anime" style="font-size:22px">🎌</span>
+        <span class="custom-label">Аниме</span>
+        <img id="previewImg-anime" class="icon-preview" alt="">
+        <button class="upload-btn" onclick="document.getElementById('iconFile-anime').click()">Изменить</button>
+        <button class="reset-btn" onclick="resetIcon('anime')">✕</button>
+        <input type="file" id="iconFile-anime" accept="image/*" onchange="loadIcon(this,'anime')">
+      </div>
+
+      <div class="custom-row">
+        <span class="icon" id="previewIcon-games" style="font-size:22px">🎮</span>
+        <span class="custom-label">Игры</span>
+        <img id="previewImg-games" class="icon-preview" alt="">
+        <button class="upload-btn" onclick="document.getElementById('iconFile-games').click()">Изменить</button>
+        <button class="reset-btn" onclick="resetIcon('games')">✕</button>
+        <input type="file" id="iconFile-games" accept="image/*" onchange="loadIcon(this,'games')">
+      </div>
+
+      <div class="custom-row">
+        <span class="icon" id="previewIcon-series" style="font-size:22px">📺</span>
+        <span class="custom-label">Сериалы</span>
+        <img id="previewImg-series" class="icon-preview" alt="">
+        <button class="upload-btn" onclick="document.getElementById('iconFile-series').click()">Изменить</button>
+        <button class="reset-btn" onclick="resetIcon('series')">✕</button>
+        <input type="file" id="iconFile-series" accept="image/*" onchange="loadIcon(this,'series')">
+      </div>
+
+      <div class="custom-row">
+        <span class="icon" id="previewIcon-films" style="font-size:22px">🎬</span>
+        <span class="custom-label">Фильмы</span>
+        <img id="previewImg-films" class="icon-preview" alt="">
+        <button class="upload-btn" onclick="document.getElementById('iconFile-films').click()">Изменить</button>
+        <button class="reset-btn" onclick="resetIcon('films')">✕</button>
+        <input type="file" id="iconFile-films" accept="image/*" onchange="loadIcon(this,'films')">
+      </div>
+    </div>
+
+    <div class="sep"></div>
+
+    <!-- ACCENT COLOR -->
+    <div class="custom-section">
+      <div class="custom-section-title">Акцентный цвет</div>
+      <div class="custom-row" style="flex-wrap:wrap;gap:8px;">
+        <div class="color-swatch" onclick="setAccent('#7c5cfc')" style="background:#7c5cfc"></div>
+        <div class="color-swatch" onclick="setAccent('#06b6d4')" style="background:#06b6d4"></div>
+        <div class="color-swatch" onclick="setAccent('#f97316')" style="background:#f97316"></div>
+        <div class="color-swatch" onclick="setAccent('#ec4899')" style="background:#ec4899"></div>
+        <div class="color-swatch" onclick="setAccent('#22c55e')" style="background:#22c55e"></div>
+        <div class="color-swatch" onclick="setAccent('#f43f5e')" style="background:#f43f5e"></div>
+        <div class="color-swatch" onclick="setAccent('#eab308')" style="background:#eab308"></div>
+        <input type="color" id="accentPicker" value="#7c5cfc" oninput="setAccent(this.value)" title="Свой цвет" style="width:36px;height:36px;border-radius:8px;border:2px solid var(--border);cursor:pointer;padding:2px;background:none;">
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<style>
+.color-swatch { width: 36px; height: 36px; border-radius: 8px; cursor: pointer; border: 2px solid transparent; transition: border-color .15s, transform .15s; }
+.color-swatch:hover { transform: scale(1.1); border-color: #fff4; }
+</style>
 
 <!-- Modal -->
 <div class="overlay" id="overlay" onclick="maybeClose(event)">
@@ -176,19 +384,131 @@
 </div>
 
 <script>
+// ===== JSONBIN =====
 const API_BASE = 'https://api.jsonbin.io/v3';
 let API_KEY = '', BIN_ID = '';
-let items = {};
-let currentTab = 'anime', currentFilter = 'all', editingId = null;
+let items = {}, currentTab = 'anime', currentFilter = 'all', editingId = null;
 let isSaving = false, pollTimer = null;
 
+// ===== CUSTOMIZATION STATE =====
+const DEFAULTS = { icons: {anime:null,games:null,series:null,films:null}, bg: null, bgOpacity: 100, blurAmount: 12, accent: '#7c5cfc' };
+let custom = JSON.parse(JSON.stringify(DEFAULTS));
+
+// ===== INIT =====
 window.addEventListener('load', () => {
+  loadCustom();
   API_KEY = localStorage.getItem('wl_apikey') || '';
   BIN_ID  = localStorage.getItem('wl_binid')  || '';
   if (API_KEY && BIN_ID) { showMain(); loadFromBin(); startPolling(); }
   else { showSetup(); if (API_KEY) { document.getElementById('apiKeyInput').value = API_KEY; document.getElementById('binFieldWrap').style.display = 'flex'; } }
 });
 
+// ===== CUSTOMIZATION =====
+function loadCustom() {
+  try { const s = localStorage.getItem('wl_custom'); if (s) custom = { ...DEFAULTS, ...JSON.parse(s) }; } catch(e) {}
+  applyCustom();
+}
+function saveCustom() { localStorage.setItem('wl_custom', JSON.stringify(custom)); }
+
+function applyCustom() {
+  // accent
+  document.documentElement.style.setProperty('--accent', custom.accent);
+  document.documentElement.style.setProperty('--accent2', lighten(custom.accent, 30));
+  document.documentElement.style.setProperty('--accent-glow', custom.accent + '40');
+  document.getElementById('accentPicker').value = custom.accent;
+
+  // bg
+  const bg = document.getElementById('bgLayer');
+  if (custom.bg) {
+    bg.style.backgroundImage = `url(${custom.bg})`;
+    bg.style.opacity = custom.bgOpacity / 100;
+    document.getElementById('bgPreview').src = custom.bg;
+    document.getElementById('bgPreview').classList.add('show');
+  } else {
+    bg.style.backgroundImage = '';
+    bg.style.opacity = 1;
+    document.getElementById('bgPreview').classList.remove('show');
+  }
+  document.getElementById('bgOpacity').value = custom.bgOpacity;
+  document.getElementById('bgOpacityVal').textContent = custom.bgOpacity + '%';
+
+  // blur
+  const blur = custom.blurAmount;
+  document.documentElement.style.setProperty('--bg2', `#131629${Math.round(blur>0?0.8*255:1*255).toString(16).padStart(2,'0')}`);
+  document.querySelectorAll('.item, header, .tab, .setup-wrap, .body-wrap, .custom-panel').forEach(el => {
+    el.style.backdropFilter = `blur(${blur}px)`;
+    el.style.webkitBackdropFilter = `blur(${blur}px)`;
+  });
+  document.getElementById('blurAmount').value = blur;
+  document.getElementById('blurVal').textContent = blur + 'px';
+
+  // icons
+  ['anime','games','series','films'].forEach(cat => {
+    const defEmoji = {anime:'🎌',games:'🎮',series:'📺',films:'🎬'}[cat];
+    const iconEl = document.getElementById('icon-' + cat);
+    const prevEl = document.getElementById('previewIcon-' + cat);
+    const prevImg = document.getElementById('previewImg-' + cat);
+    if (custom.icons[cat]) {
+      iconEl.innerHTML = `<img src="${custom.icons[cat]}" style="width:22px;height:22px;object-fit:cover;border-radius:4px;">`;
+      prevEl.innerHTML = `<img src="${custom.icons[cat]}" style="width:22px;height:22px;object-fit:cover;border-radius:4px;">`;
+      prevImg.src = custom.icons[cat];
+      prevImg.classList.add('show');
+    } else {
+      iconEl.innerHTML = defEmoji;
+      prevEl.innerHTML = defEmoji;
+      prevImg.classList.remove('show');
+    }
+  });
+}
+
+function lighten(hex, amount) {
+  const num = parseInt(hex.replace('#',''), 16);
+  const r = Math.min(255, (num >> 16) + amount);
+  const g = Math.min(255, ((num >> 8) & 0xff) + amount);
+  const b = Math.min(255, (num & 0xff) + amount);
+  return '#' + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+}
+
+function toggleCustom() {
+  document.getElementById('customPanel').classList.toggle('open');
+  document.getElementById('panelDim').classList.toggle('show');
+}
+
+function loadBg(input) {
+  const file = input.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    custom.bg = e.target.result;
+    saveCustom(); applyCustom();
+  };
+  reader.readAsDataURL(file);
+}
+function removeBg() {
+  custom.bg = null; saveCustom(); applyCustom();
+}
+function updateBgOpacity(v) {
+  custom.bgOpacity = parseInt(v); saveCustom(); applyCustom();
+}
+function updateBlur(v) {
+  custom.blurAmount = parseInt(v); saveCustom(); applyCustom();
+}
+function setAccent(color) {
+  custom.accent = color; saveCustom(); applyCustom();
+}
+function loadIcon(input, cat) {
+  const file = input.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    custom.icons[cat] = e.target.result;
+    saveCustom(); applyCustom();
+  };
+  reader.readAsDataURL(file);
+}
+function resetIcon(cat) {
+  custom.icons[cat] = null; saveCustom(); applyCustom();
+}
+
+// ===== SETUP =====
 function showSetup() {
   document.getElementById('setupScreen').classList.add('visible');
   document.getElementById('mainApp').style.display = 'none';
@@ -243,7 +563,6 @@ async function tryLoadBin(id) {
     render(); setSyncState('live', 'синхронизировано'); return true;
   } catch(e) { showSetupError('Ошибка сети: ' + e.message); return false; }
 }
-
 async function createBin() {
   try {
     const r = await fetch(`${API_BASE}/b`, {
@@ -256,15 +575,14 @@ async function createBin() {
     return data.metadata?.id || null;
   } catch(e) { showSetupError('Ошибка: ' + e.message); return null; }
 }
-
 function showSetupError(msg) { const e = document.getElementById('setupError'); e.textContent = '⚠️ ' + msg; e.style.display = 'block'; }
 function hideSetupError() { document.getElementById('setupError').style.display = 'none'; }
 
+// ===== SYNC =====
 function setSyncState(state, label) {
   document.getElementById('syncDot').className = 'sync-dot ' + state;
   document.getElementById('syncLabel').textContent = label;
 }
-
 async function loadFromBin() {
   if (!API_KEY || !BIN_ID) return;
   setSyncState('loading', 'загрузка...');
@@ -276,7 +594,6 @@ async function loadFromBin() {
     render(); setSyncState('live', 'синхронизировано');
   } catch(e) { setSyncState('error', 'ошибка'); }
 }
-
 async function saveToBin() {
   if (!API_KEY || !BIN_ID || isSaving) return;
   isSaving = true; setSyncState('loading', 'сохранение...');
@@ -291,9 +608,9 @@ async function saveToBin() {
   } catch(e) { setSyncState('error', 'ошибка сохранения'); }
   finally { isSaving = false; }
 }
-
 function startPolling() { clearInterval(pollTimer); pollTimer = setInterval(loadFromBin, 15000); }
 
+// ===== TABS =====
 function setTab(cat) {
   currentTab = cat;
   document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.cat === cat));
@@ -306,6 +623,7 @@ function setFilter(f, btn) {
   btn.classList.add('active'); render();
 }
 
+// ===== RENDER =====
 function render() {
   const list = document.getElementById('list');
   const catItems = Object.values(items)
@@ -320,7 +638,7 @@ function render() {
   if (!catItems.length) {
     const labels = {anime:'аниме',games:'игры',series:'сериалы',films:'фильмы'};
     const icons  = {anime:'🎌',games:'🎮',series:'📺',films:'🎬'};
-    list.innerHTML = `<div class="empty"><div class="empty-icon">${icons[currentTab]}</div><p>Список ${labels[currentTab]} пуст.<br>Нажми <strong>+</strong> чтобы добавить!</p></div>`;
+    list.innerHTML = `<div class="empty" style="grid-column:1/-1"><div class="empty-icon">${icons[currentTab]}</div><p>Список ${labels[currentTab]} пуст.<br>Нажми <strong>+</strong> чтобы добавить!</p></div>`;
     return;
   }
   list.innerHTML = catItems.map(item => `
@@ -338,6 +656,7 @@ function render() {
 }
 function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
+// ===== CRUD =====
 async function toggleDone(id) {
   if (!items[id]) return;
   items[id] = {...items[id], done: !items[id].done};
@@ -372,6 +691,7 @@ async function saveItem() {
   btn.disabled = false; btn.textContent = 'Сохранить';
 }
 
+// ===== MODAL =====
 function openModal() {
   editingId = null;
   document.getElementById('modalTitle').textContent = 'Добавить';
