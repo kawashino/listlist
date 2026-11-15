@@ -5,220 +5,43 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>нехентай</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Nunito:wght@400;600;700&family=Fira+Code:wght@400;500&family=Comfortaa:wght@400;600;700&family=Raleway:wght@400;600;700&family=Unbounded:wght@400;600;700&family=Russo+One&family=Press+Start+2P&display=swap" rel="stylesheet">
-<style>
-:root {
-  --bg: #0d0f1a;
-  --bg2: rgba(19,22,41,0.85);
-  --bg3: rgba(26,30,53,0.85);
-  --card-bg: rgba(30,35,64,0.80);
-  --card-hover: rgba(37,43,74,0.85);
-  --border-color: rgba(45,51,88,1);
-  --border-width: 1px;
-  --border-radius: 12px;
-  --accent: #7c5cfc;
-  --accent2: #a78bfa;
-  --accent-glow: rgba(124,92,252,0.25);
-  --text: #e8eaf6;
-  --text2: #9095b5;
-  --text3: #5a6080;
-  --card-text: #e8eaf6;
-  --header-bg: rgba(19,22,41,0.85);
-  --done: #22c55e;
-  --done-bg: rgba(34,197,94,0.12);
-  --del: #f43f5e;
-  --tab-anime: #f97316;
-  --tab-games: #06b6d4;
-  --tab-series: #a855f7;
-  --tab-films: #ec4899;
-  --font: 'Inter', sans-serif;
-  --font-size: 15px;
-  box-sizing: border-box;
-}
-*,*::before,*::after{box-sizing:inherit;}
-html,body{margin:0;padding:0;min-height:100%;background:var(--bg);color:var(--text);font-family:var(--font);font-size:var(--font-size);}
-
-/* Press Start 2P (Minecraft-style) needs smaller size in items */
-.font-ps2 .item-title { font-size: 10px !important; letter-spacing: 0; }
-.font-ps2 .item-meta  { font-size: 9px !important; }
-.font-ps2 .tab        { font-size: 9px !important; }
-.font-ps2 header .logo { font-size: 14px !important; }
-/* Fira Code — cap size so it doesn't overflow */
-.font-fira .item-title { font-size: 12px !important; }
-.font-fira .item-meta  { font-size: 11px !important; }
-
-#bgLayer{position:fixed;inset:0;z-index:0;background-size:cover;background-position:center;background-repeat:no-repeat;}
-#app{position:relative;z-index:1;display:flex;flex-direction:column;min-height:100dvh;}
-.desktop-wrap{display:flex;flex-direction:column;width:100%;max-width:820px;margin:0 auto;flex:1;}
-@media(min-width:700px){.desktop-wrap{padding:24px 24px 40px;}}
-
-header{background:var(--header-bg);border-bottom:1px solid var(--border-color);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);padding:14px 20px 10px;position:sticky;top:0;z-index:5;}
-@media(min-width:700px){header{border-radius:16px 16px 0 0;padding:16px 28px 12px;}}
-.header-row{display:flex;align-items:center;justify-content:space-between;gap:12px;}
-.logo{font-size:20px;font-weight:700;letter-spacing:-0.5px;}
-.logo span{color:var(--accent2);}
-.header-right{display:flex;align-items:center;gap:8px;}
-.sync-row{display:flex;align-items:center;gap:7px;}
-.sync-dot{width:8px;height:8px;border-radius:50%;background:var(--text3);flex-shrink:0;}
-.sync-dot.live{background:var(--done);box-shadow:0 0 6px var(--done);}
-.sync-dot.loading{background:var(--accent);animation:pulse 1s infinite;}
-.sync-dot.error{background:var(--del);}
-.sync-label{font-size:11px;color:var(--text3);}
-.icon-btn{background:none;border:none;cursor:pointer;color:var(--text3);font-size:18px;padding:5px 7px;border-radius:8px;transition:color .2s,background .2s;}
-.icon-btn:hover{color:var(--text);background:rgba(255,255,255,0.08);}
-
-.tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--border-color);}
-@media(min-width:700px){.tabs{gap:0;background:none;border-bottom:1px solid var(--border-color);}}
-.tab{padding:10px 4px 8px;text-align:center;cursor:pointer;background:var(--header-bg);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);font-size:11px;font-weight:600;color:var(--text3);display:flex;flex-direction:column;align-items:center;gap:3px;transition:color .2s,background .2s;user-select:none;overflow:hidden;}
-@media(min-width:700px){.tab{flex-direction:row;gap:8px;padding:12px 20px;font-size:13px;justify-content:center;}}
-.tab .icon{font-size:20px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
-.tab .icon img{width:22px;height:22px;object-fit:cover;border-radius:4px;}
-.tab.active{background:var(--bg3);}
-.tab[data-cat="anime"].active{color:var(--tab-anime);border-top:2px solid var(--tab-anime);}
-.tab[data-cat="games"].active{color:var(--tab-games);border-top:2px solid var(--tab-games);}
-.tab[data-cat="series"].active{color:var(--tab-series);border-top:2px solid var(--tab-series);}
-.tab[data-cat="films"].active{color:var(--tab-films);border-top:2px solid var(--tab-films);}
-.tab .badge{background:var(--accent);color:#fff;border-radius:20px;font-size:10px;padding:1px 6px;min-width:18px;display:none;}
-.tab .badge.show{display:inline-block;}
-
-.body-wrap{display:flex;flex:1;background:var(--bg2);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);}
-@media(min-width:700px){.body-wrap{border-radius:0 0 16px 16px;border:1px solid var(--border-color);border-top:none;}}
-.content{flex:1;padding:18px 14px 90px;}
-@media(min-width:700px){.content{padding:22px 24px 60px;}}
-
-.toolbar{display:flex;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap;}
-.filter-row{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px;scrollbar-width:none;flex:1;min-width:0;}
-.filter-row::-webkit-scrollbar{display:none;}
-.filter-btn{padding:5px 12px;border-radius:20px;border:1px solid var(--border-color);background:none;color:var(--text2);font-size:12px;font-weight:500;cursor:pointer;white-space:nowrap;font-family:var(--font);transition:background .15s,color .15s,border-color .15s;}
-.filter-btn.active{background:var(--accent-glow);border-color:var(--accent);color:var(--accent2);}
-.sort-select{padding:5px 10px;border-radius:20px;border:1px solid var(--border-color);background:var(--bg3);color:var(--text2);font-size:12px;font-family:var(--font);cursor:pointer;outline:none;appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%239095b5'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center;padding-right:24px;}
-
-.fab{position:fixed;bottom:24px;right:24px;width:54px;height:54px;border-radius:50%;background:var(--accent);color:#fff;border:none;font-size:26px;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 20px var(--accent-glow);transition:transform .15s;z-index:10;}
-@media(min-width:700px){.fab{bottom:40px;right:calc(50% - 410px + 24px);width:50px;height:50px;font-size:22px;}}
-.fab:active{transform:scale(.93);}
-.fab[data-cat="anime"]{background:var(--tab-anime);box-shadow:0 4px 20px rgba(249,115,22,.35);}
-.fab[data-cat="games"]{background:var(--tab-games);box-shadow:0 4px 20px rgba(6,182,212,.35);}
-.fab[data-cat="series"]{background:var(--tab-series);box-shadow:0 4px 20px rgba(168,85,247,.35);}
-.fab[data-cat="films"]{background:var(--tab-films);box-shadow:0 4px 20px rgba(236,72,153,.35);}
-
-#list{display:grid;grid-template-columns:1fr;gap:10px;}
-@media(min-width:700px){#list{grid-template-columns:repeat(2,1fr);}}
-
-.item{background:var(--card-bg);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-radius:var(--border-radius);display:flex;align-items:center;gap:12px;padding:13px 14px;border:var(--border-width) solid var(--border-color);transition:background .15s;overflow:hidden;}
-.item:hover{background:var(--card-hover);}
-.item.done{background:var(--done-bg);border-color:rgba(34,197,94,.2);}
-.check{width:26px;height:26px;border-radius:50%;border:2px solid rgba(255,255,255,0.15);cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:border-color .2s,background .2s;font-size:13px;}
-.item.done .check{background:var(--done);border-color:var(--done);}
-.item-body{flex:1;min-width:0;}
-.item-title{font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--card-text);}
-.item.done .item-title{text-decoration:line-through;opacity:.5;}
-.item-meta{font-size:12px;color:var(--text2);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.item-actions{display:flex;gap:6px;flex-shrink:0;}
-.btn-icon{width:32px;height:32px;border-radius:8px;border:none;cursor:pointer;font-size:15px;display:flex;align-items:center;justify-content:center;background:var(--bg3);color:var(--text2);transition:background .15s;}
-.btn-icon.del:hover{background:rgba(244,63,94,.15);color:var(--del);}
-
-.empty{text-align:center;padding:60px 20px 40px;color:var(--text3);}
-.empty .empty-icon{font-size:52px;margin-bottom:12px;}
-.empty p{margin:0;font-size:14px;line-height:1.6;}
-
-.setup-wrap{flex:1;padding:24px 20px 40px;display:none;flex-direction:column;gap:14px;overflow-y:auto;background:var(--bg2);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);}
-@media(min-width:700px){.setup-wrap{padding:32px 40px 40px;border-radius:0 0 16px 16px;border:1px solid var(--border-color);border-top:none;max-width:560px;margin:0 auto;width:100%;}}
-.setup-wrap.visible{display:flex;}
-.setup-wrap h2{margin:0 0 4px;font-size:18px;}
-.setup-wrap p,.setup-wrap ol{margin:0;font-size:13px;color:var(--text2);line-height:1.6;}
-.setup-wrap ol{padding-left:20px;line-height:2.2;}
-.setup-wrap ol a{color:var(--accent2);}
-.setup-field{display:flex;flex-direction:column;gap:6px;}
-.setup-field label{font-size:12px;font-weight:600;color:var(--text2);}
-.setup-field input{background:var(--bg3);border:1px solid var(--border-color);border-radius:10px;color:var(--text);font-family:var(--font);font-size:14px;padding:11px 14px;outline:none;transition:border-color .2s;}
-.setup-field input:focus{border-color:var(--accent);}
-.setup-field small{font-size:11px;color:var(--text3);}
-.btn-setup{padding:13px;border-radius:10px;border:none;background:var(--accent);color:#fff;font-size:15px;font-weight:600;cursor:pointer;font-family:var(--font);}
-.btn-setup:disabled{opacity:.5;cursor:default;}
-.sep{height:1px;background:rgba(255,255,255,0.07);margin:2px 0;}
-.info-box{background:var(--bg3);border-radius:10px;padding:12px 14px;font-size:12px;color:var(--text2);line-height:1.7;border:1px solid var(--border-color);}
-.info-box b{color:var(--accent2);}
-
-/* CUSTOM PANEL */
-.custom-panel{position:fixed;top:0;right:-380px;width:360px;height:100dvh;background:#0c0e1ef8;backdrop-filter:blur(28px);-webkit-backdrop-filter:blur(28px);border-left:1px solid rgba(255,255,255,0.08);z-index:30;transition:right .3s cubic-bezier(.4,0,.2,1);display:flex;flex-direction:column;overflow:hidden;}
-.custom-panel.open{right:0;}
-@media(max-width:400px){.custom-panel{width:100%;right:-100%;}}
-.custom-header{padding:18px 20px 14px;border-bottom:1px solid rgba(255,255,255,0.07);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
-.custom-header h3{margin:0;font-size:16px;}
-.custom-body{flex:1;overflow-y:auto;padding:16px 20px 32px;display:flex;flex-direction:column;gap:16px;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,0.1) transparent;}
-.cs{display:flex;flex-direction:column;gap:9px;}
-.cs-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text3);padding-bottom:5px;border-bottom:1px solid rgba(255,255,255,0.06);}
-.cr{display:flex;align-items:center;gap:8px;}
-.cl{font-size:12px;color:var(--text2);flex:1;min-width:50px;}
-.upload-btn{padding:6px 11px;border-radius:8px;border:1px dashed rgba(255,255,255,0.15);background:var(--bg3);color:var(--text2);font-size:11px;font-weight:500;cursor:pointer;font-family:var(--font);transition:border-color .2s,color .2s;white-space:nowrap;}
-.upload-btn:hover{border-color:var(--accent);color:var(--accent2);}
-.reset-sm{padding:4px 8px;border-radius:6px;border:none;background:rgba(244,63,94,.12);color:var(--del);font-size:11px;cursor:pointer;font-family:var(--font);white-space:nowrap;}
-.icon-prev-img{width:28px;height:28px;border-radius:6px;object-fit:cover;display:none;border:1px solid var(--border-color);flex-shrink:0;}
-.icon-prev-img.show{display:block;}
-.rr{display:flex;align-items:center;gap:8px;}
-.rr input[type=range]{flex:1;accent-color:var(--accent);height:4px;}
-.rv{font-size:11px;color:var(--text2);min-width:36px;text-align:right;}
-.bg-preview{width:100%;height:70px;border-radius:10px;object-fit:cover;display:none;border:1px solid var(--border-color);}
-.bg-preview.show{display:block;}
-.color-grid{display:flex;flex-wrap:wrap;gap:6px;align-items:center;}
-.swatch{width:26px;height:26px;border-radius:6px;cursor:pointer;border:2px solid transparent;transition:border-color .15s,transform .12s;flex-shrink:0;}
-.swatch:hover{transform:scale(1.12);border-color:rgba(255,255,255,0.3);}
-input[type=color]{width:26px;height:26px;border-radius:6px;border:2px solid rgba(255,255,255,0.15);cursor:pointer;padding:2px;background:none;flex-shrink:0;}
-.font-select,.sort-sel{width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--border-color);background:var(--bg3);color:var(--text);font-size:12px;font-family:var(--font);outline:none;cursor:pointer;}
-.font-select:focus,.sort-sel:focus{border-color:var(--accent);}
-input[type=file]{display:none;}
-
-/* RGB toggle row */
-.rgb-row{display:flex;align-items:center;justify-content:space-between;gap:8px;}
-.toggle{position:relative;display:inline-block;width:36px;height:20px;flex-shrink:0;}
-.toggle input{opacity:0;width:0;height:0;}
-.slider{position:absolute;cursor:pointer;inset:0;background:rgba(255,255,255,0.1);border-radius:20px;transition:.3s;}
-.slider:before{position:absolute;content:"";height:14px;width:14px;left:3px;bottom:3px;background:white;border-radius:50%;transition:.3s;}
-input:checked+.slider{background:var(--accent);}
-input:checked+.slider:before{transform:translateX(16px);}
-
-.panel-dim{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:29;}
-.panel-dim.show{display:block;}
-
-.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:20;align-items:flex-end;justify-content:center;backdrop-filter:blur(4px);}
-.overlay.open{display:flex;}
-@media(min-width:700px){.overlay{align-items:center;}}
-.modal{background:#1a1e35;border-radius:20px 20px 0 0;width:100%;max-width:480px;padding:24px 20px 32px;border-top:1px solid var(--border-color);animation:slideup .2s ease;}
-@media(min-width:700px){.modal{border-radius:20px;border:1px solid var(--border-color);padding:28px;}}
-@keyframes slideup{from{transform:translateY(60px);opacity:0}to{transform:translateY(0);opacity:1}}
-@media(min-width:700px){@keyframes slideup{from{transform:scale(.95);opacity:0}to{transform:scale(1);opacity:1}}}
-.modal-title{font-size:17px;font-weight:700;margin-bottom:18px;}
-.field{margin-bottom:14px;}
-.field label{display:block;font-size:12px;font-weight:600;color:var(--text2);margin-bottom:6px;}
-.field input,.field textarea{width:100%;background:var(--bg3);border:1px solid var(--border-color);border-radius:10px;color:var(--text);font-family:var(--font);font-size:15px;padding:11px 14px;outline:none;transition:border-color .2s;}
-.field input:focus,.field textarea:focus{border-color:var(--accent);}
-.field textarea{resize:none;height:70px;}
-.btn-row{display:flex;gap:10px;margin-top:20px;}
-.btn{flex:1;padding:13px;border-radius:10px;border:none;font-size:15px;font-weight:600;cursor:pointer;font-family:var(--font);transition:opacity .15s;}
-.btn-primary{background:var(--accent);color:#fff;}
-.btn-secondary{background:var(--bg3);color:var(--text2);}
-.btn:active{opacity:.8;}
-.btn:disabled{opacity:.5;cursor:default;}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
-</style>
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
-<div id="bgLayer"></div>
+<div id="bgLayer">
+  <div id="bgImg"></div>
+  <div id="bgGrad"></div>
+  <div id="bgOverlay"></div>
+</div>
+
 <div id="app">
   <div class="desktop-wrap">
+
+    <!-- HEADER -->
     <header>
       <div class="header-row">
-        <div class="logo">хен <span>тайчик</span></div>
+        <div class="logo">
+          <span class="logo-icon" id="logoIcon" style="display:none"></span>
+          <span>хен<span>тай</span></span>
+        </div>
         <div class="header-right">
           <div class="sync-row">
             <div id="syncDot" class="sync-dot loading"></div>
             <span id="syncLabel" class="sync-label">настройка...</span>
           </div>
-          <button class="icon-btn" onclick="toggleCustom()" title="Кастомизация">💋</button>
-          <button class="icon-btn" onclick="resetSettings()" title="Настройки">⚙️</button>
+          <button class="icon-btn" onclick="toggleCustom()" title="Кастомизация">🎨</button>
+          <button class="icon-btn" onclick="resetSettings()" title="Настройки подключения">⚙️</button>
+        </div>
+      </div>
+      <div id="searchWrap" class="search-wrap" style="margin-top:8px;padding:0">
+        <div class="search-wrap-inner">
+          <span class="search-icon" id="searchIconEl">🔍</span>
+          <input class="search-input" id="searchInput" placeholder="Поиск по списку..." autocomplete="off">
         </div>
       </div>
     </header>
 
+    <!-- SETUP -->
     <div class="setup-wrap" id="setupScreen">
       <h2>⚙️ Первый запуск</h2>
       <p>Для синхронизации между двумя людьми нужен бесплатный JSONBin.io аккаунт.</p>
@@ -229,12 +52,12 @@ input:checked+.slider:before{transform:translateX(16px);}
         <li>После входа → <strong>API Keys</strong> → скопируй Secret Key</li>
         <li>Вставь ниже и нажми «Подключить»</li>
       </ol>
-      <div class="setup-field">
+      <div class="sfield">
         <label>SECRET KEY с jsonbin.io</label>
         <input id="apiKeyInput" type="password" placeholder="$2a$10$xxxxxxxxxxxxxxxxxxxxxxx..." autocomplete="off">
         <small>Хранится только в этом браузере</small>
       </div>
-      <div class="setup-field" id="binFieldWrap" style="display:none">
+      <div class="sfield" id="binFieldWrap" style="display:none">
         <label>BIN ID <span style="font-weight:400;color:var(--text3)">(есть — вставь; нет — оставь пустым)</span></label>
         <input id="binIdInput" placeholder="6xxxxxxxxxxxxxxxxxxxxxxx">
         <small>Второй человек вводит тот же Bin ID что и первый</small>
@@ -243,15 +66,20 @@ input:checked+.slider:before{transform:translateX(16px);}
       <p id="setupError" style="color:var(--del);font-size:13px;display:none;margin:0"></p>
     </div>
 
+    <!-- MAIN APP -->
     <div id="mainApp" style="display:none;flex-direction:column;flex:1;">
-      <nav class="tabs">
-        <div class="tab active" data-cat="anime" onclick="setTab('anime')"><span class="icon" id="icon-anime">🎌</span><span>Аниме</span><span class="badge" id="badge-anime"></span></div>
-        <div class="tab" data-cat="games" onclick="setTab('games')"><span class="icon" id="icon-games">🎮</span><span>Игры</span><span class="badge" id="badge-games"></span></div>
-        <div class="tab" data-cat="series" onclick="setTab('series')"><span class="icon" id="icon-series">📺</span><span>Сериалы</span><span class="badge" id="badge-series"></span></div>
-        <div class="tab" data-cat="films" onclick="setTab('films')"><span class="icon" id="icon-films">🎬</span><span>Фильмы</span><span class="badge" id="badge-films"></span></div>
-      </nav>
+      <nav class="tabs" id="tabsNav"></nav>
       <div class="body-wrap">
         <div class="content">
+
+          <!-- STATS -->
+          <div class="stats-bar" id="statsBar">
+            <div class="stat"><span class="stat-num" id="stat-total">0</span><span class="stat-label">Всего</span></div>
+            <div class="stat"><span class="stat-num" id="stat-done" style="color:var(--done)">0</span><span class="stat-label">Просмотрено</span></div>
+            <div class="stat"><span class="stat-num" id="stat-left">0</span><span class="stat-label">Осталось</span></div>
+          </div>
+
+          <!-- TOOLBAR -->
           <div class="toolbar">
             <div class="filter-row">
               <button class="filter-btn active" onclick="setFilter('all',this)">Все</button>
@@ -259,17 +87,19 @@ input:checked+.slider:before{transform:translateX(16px);}
               <button class="filter-btn" onclick="setFilter('done',this)">Просмотрено</button>
             </div>
             <select class="sort-select" id="sortSelect" onchange="setSort(this.value)">
-              <option value="date_desc">Новые</option>
-              <option value="date_asc">Старые</option>
+              <option value="date_desc">📅 Новые</option>
+              <option value="date_asc">📅 Старые</option>
               <option value="alpha_asc">А→Я</option>
               <option value="alpha_desc">Я→А</option>
               <option value="status">По статусу</option>
             </select>
           </div>
+
           <div id="list"></div>
         </div>
       </div>
     </div>
+
     <button class="fab" id="fab" data-cat="anime" onclick="openModal()">+</button>
   </div>
 </div>
@@ -277,123 +107,201 @@ input:checked+.slider:before{transform:translateX(16px);}
 <!-- CUSTOM PANEL -->
 <div class="panel-dim" id="panelDim" onclick="toggleCustom()"></div>
 <div class="custom-panel" id="customPanel">
-  <div class="custom-header">
-    <h3>💋 Кастомизация</h3>
+  <div class="cp-header">
+    <h3>🎨 Кастомизация</h3>
     <button class="icon-btn" onclick="toggleCustom()">✕</button>
   </div>
-  <div class="custom-body">
+  <div class="cp-tabs">
+    <div class="cp-tab active" data-tab="bg" onclick="switchCpTab('bg')">🖼 Фон</div>
+    <div class="cp-tab" data-tab="cards" onclick="switchCpTab('cards')">🃏 Карточки</div>
+    <div class="cp-tab" data-tab="rgb" onclick="switchCpTab('rgb')">🌈 RGB</div>
+    <div class="cp-tab" data-tab="ui" onclick="switchCpTab('ui')">🖥 Интерфейс</div>
+    <div class="cp-tab" data-tab="icons" onclick="switchCpTab('icons')">🖼 Иконки</div>
+    <div class="cp-tab" data-tab="cats" onclick="switchCpTab('cats')">📂 Категории</div>
+  </div>
+  <div class="cp-body">
 
-    <!-- BG -->
-    <div class="cs">
-      <div class="cs-title">Фон</div>
-      <img id="bgPreview" class="bg-preview" alt="">
-      <div class="cr">
-        <button class="upload-btn" onclick="document.getElementById('bgFile').click()">📁 Фото / GIF</button>
-        <button class="reset-sm" onclick="removeBg()">Убрать</button>
+    <!-- PAGE: BG -->
+    <div class="cp-page active" data-page="bg">
+      <div class="cs">
+        <div class="cs-title">Изображение</div>
+        <img id="bgPreview" class="bg-preview" alt="">
+        <div class="cr">
+          <button class="upload-btn" onclick="document.getElementById('bgFile').click()">📁 Загрузить фото / GIF</button>
+          <button class="reset-sm" onclick="removeBg()">Убрать</button>
+          <input type="file" id="bgFile" accept="image/*" onchange="loadBg(this)">
+        </div>
+        <div class="rr"><span class="cl">Яркость</span><input type="range" id="bgOpacity" min="0" max="100" value="100" oninput="setBgOpacity(this.value)"><span class="rv" id="bgOpacityVal">100%</span></div>
+        <div class="rr"><span class="cl">Затемнение</span><input type="range" id="bgOverlayRange" min="0" max="90" value="0" oninput="setBgOverlay(this.value)"><span class="rv" id="bgOverlayVal">0%</span></div>
+        <div class="cr"><span class="cl">Режим</span>
+          <select class="cp-select" id="bgSizeSelect" onchange="setBgSize(this.value)" style="flex:1">
+            <option value="cover">Cover — заполнить (обрезать)</option>
+            <option value="contain">Contain — вписать целиком</option>
+            <option value="fill">Fill — растянуть</option>
+            <option value="zoom">Zoom — масштаб вручную</option>
+          </select>
+        </div>
+        <div class="rr"><span class="cl">Масштаб (zoom)</span><input type="range" id="bgZoom" min="50" max="300" value="100" oninput="setBgZoom(this.value)"><span class="rv" id="bgZoomVal">100%</span></div>
+        <div class="cs-title" style="margin-top:4px">Позиция изображения</div>
+        <div class="bg-pos-pad" id="bgPosPad">
+          <div class="bg-pos-dot" id="bgPosDot" style="left:50%;top:50%"></div>
+          <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:11px;color:rgba(255,255,255,0.3);pointer-events:none">Перетащи точку</div>
+        </div>
       </div>
-      <input type="file" id="bgFile" accept="image/*" onchange="loadBg(this)">
-      <div class="rr"><span class="cl">Яркость фона</span><input type="range" id="bgOpacity" min="0" max="100" value="100" oninput="setBgOpacity(this.value)"><span class="rv" id="bgOpacityVal">100%</span></div>
-      <div class="rr"><span class="cl">Размытие UI</span><input type="range" id="blurAmt" min="0" max="100" value="36" oninput="setBlur(this.value)"><span class="rv" id="blurVal">36px</span></div>
-    </div><div class="sep"></div>
-
-    <!-- CARDS -->
-    <div class="cs">
-      <div class="cs-title">Карточки</div>
-      <div class="cr"><span class="cl">Цвет фона</span><input type="color" id="cardBgColor" value="#1e2340" oninput="setCardBg(this.value)"><div class="rr" style="flex:1"><input type="range" id="cardBgOpacity" min="0" max="100" value="80" oninput="setCardBgOpacity(this.value)"><span class="rv" id="cardBgOpacityVal">80%</span></div></div>
-      <div class="cr"><span class="cl">Цвет текста</span><input type="color" id="cardTextColor" value="#e8eaf6" oninput="setCardText(this.value)"></div>
-    </div><div class="sep"></div>
-
-    <!-- BORDERS -->
-    <div class="cs">
-      <div class="cs-title">Рамки</div>
-      <div class="cr"><span class="cl">Цвет</span><input type="color" id="borderColorPick" value="#2d3358" oninput="setBorderColor(this.value)"></div>
-      <div class="rr"><span class="cl">Толщина</span><input type="range" id="borderWidth" min="0" max="6" value="1" step="0.5" oninput="setBorderWidth(this.value)"><span class="rv" id="borderWidthVal">1px</span></div>
-      <div class="rr"><span class="cl">Прозрачность</span><input type="range" id="borderOpacity" min="0" max="100" value="100" oninput="setBorderOpacity(this.value)"><span class="rv" id="borderOpacityVal">100%</span></div>
-      <div class="rr"><span class="cl">Скругление</span><input type="range" id="borderRadius" min="0" max="32" value="12" oninput="setBorderRadius(this.value)"><span class="rv" id="borderRadiusVal">12px</span></div>
-    </div><div class="sep"></div>
-
-    <!-- RGB -->
-    <div class="cs">
-      <div class="cs-title">🌈 RGB переливание</div>
-
-      <div class="rgb-row"><span class="cl" style="font-size:13px;color:var(--text)">Рамки карточек</span>
-        <label class="toggle"><input type="checkbox" id="rgbBorder" onchange="toggleRgb('border',this.checked)"><span class="slider"></span></label>
+      <div class="sep"></div>
+      <div class="cs">
+        <div class="cs-title">Градиентный фон</div>
+        <div class="rgb-row"><span class="cl" style="font-size:13px;color:var(--text)">Включить градиент</span>
+          <label class="toggle"><input type="checkbox" id="bgGradToggle" onchange="toggleBgGrad(this.checked)"><span class="tslider"></span></label>
+        </div>
+        <div class="cr">
+          <span class="cl">Цвет A</span><input type="color" id="bgGradA" value="#1a0533" oninput="setBgGradA(this.value)">
+          <span class="cl">Цвет B</span><input type="color" id="bgGradB" value="#001a33" oninput="setBgGradB(this.value)">
+        </div>
+        <div class="rr"><span class="cl">Угол</span><input type="range" id="bgGradAngle" min="0" max="360" value="135" oninput="setBgGradAngle(this.value)"><span class="rv" id="bgGradAngleVal">135°</span></div>
       </div>
-      <div class="rgb-row"><span class="cl" style="font-size:13px;color:var(--text)">Текст заголовков</span>
-        <label class="toggle"><input type="checkbox" id="rgbText" onchange="toggleRgb('text',this.checked)"><span class="slider"></span></label>
+      <div class="sep"></div>
+      <div class="cs">
+        <div class="cs-title">Размытие UI</div>
+        <div class="rr"><span class="cl">Размытие</span><input type="range" id="blurAmt" min="0" max="24" value="12" oninput="setBlur(this.value)"><span class="rv" id="blurVal">12px</span></div>
       </div>
-      <div class="rgb-row"><span class="cl" style="font-size:13px;color:var(--text)">Акцентный цвет</span>
-        <label class="toggle"><input type="checkbox" id="rgbAccent" onchange="toggleRgb('accent',this.checked)"><span class="slider"></span></label>
+    </div>
+
+    <!-- PAGE: CARDS -->
+    <div class="cp-page" data-page="cards">
+      <div class="cs">
+        <div class="cs-title">Фон карточек</div>
+        <div class="cr"><span class="cl">Цвет</span><input type="color" id="cardBgColor" value="#1e2340" oninput="setCardBg(this.value)">
+          <div class="rr" style="flex:1"><input type="range" id="cardBgOpacity" min="0" max="100" value="80" oninput="setCardBgOpacity(this.value)"><span class="rv" id="cardBgOpacityVal">80%</span></div>
+        </div>
       </div>
-      <div class="rgb-row"><span class="cl" style="font-size:13px;color:var(--text)">Шапка</span>
-        <label class="toggle"><input type="checkbox" id="rgbHeader" onchange="toggleRgb('header',this.checked)"><span class="slider"></span></label>
+      <div class="sep"></div>
+      <div class="cs">
+        <div class="cs-title">Текст в карточках</div>
+        <div class="cr"><span class="cl">Заголовок</span><input type="color" id="cardTextColor" value="#e8eaf6" oninput="setCardText(this.value)"></div>
+        <div class="cr"><span class="cl">Заметка</span><input type="color" id="cardMetaColor" value="#9095b5" oninput="setCardMeta(this.value)"></div>
       </div>
-      <div class="rgb-row"><span class="cl" style="font-size:13px;color:var(--text)">Фон карточек</span>
-        <label class="toggle"><input type="checkbox" id="rgbCard" onchange="toggleRgb('card',this.checked)"><span class="slider"></span></label>
+      <div class="sep"></div>
+      <div class="cs">
+        <div class="cs-title">Тень карточек</div>
+        <div class="rgb-row"><span class="cl" style="font-size:13px;color:var(--text)">Показывать тень</span>
+          <label class="toggle"><input type="checkbox" id="cardShadowToggle" checked onchange="toggleCardShadow(this.checked)"><span class="tslider"></span></label>
+        </div>
       </div>
-      <div class="rr"><span class="cl">Скорость</span><input type="range" id="rgbSpeed" min="0.5" max="10" value="3" step="0.5" oninput="setRgbSpeed(this.value)"><span class="rv" id="rgbSpeedVal">3с</span></div>
-      <div class="rr"><span class="cl">Насыщенность</span><input type="range" id="rgbSat" min="30" max="100" value="80" oninput="setRgbSat(this.value)"><span class="rv" id="rgbSatVal">80%</span></div>
-      <div class="rr"><span class="cl">Яркость</span><input type="range" id="rgbLight" min="30" max="80" value="55" oninput="setRgbLight(this.value)"><span class="rv" id="rgbLightVal">55%</span></div>
-    </div><div class="sep"></div>
-
-    <!-- ACCENT -->
-    <div class="cs">
-      <div class="cs-title">Акцентный цвет</div>
-      <div class="color-grid">
-        <div class="swatch" style="background:#7c5cfc" onclick="setAccent('#7c5cfc')"></div>
-        <div class="swatch" style="background:#06b6d4" onclick="setAccent('#06b6d4')"></div>
-        <div class="swatch" style="background:#f97316" onclick="setAccent('#f97316')"></div>
-        <div class="swatch" style="background:#ec4899" onclick="setAccent('#ec4899')"></div>
-        <div class="swatch" style="background:#22c55e" onclick="setAccent('#22c55e')"></div>
-        <div class="swatch" style="background:#f43f5e" onclick="setAccent('#f43f5e')"></div>
-        <div class="swatch" style="background:#eab308" onclick="setAccent('#eab308')"></div>
-        <div class="swatch" style="background:#ffffff" onclick="setAccent('#ffffff')"></div>
-        <input type="color" id="accentPicker" value="#7c5cfc" oninput="setAccent(this.value)">
+      <div class="sep"></div>
+      <div class="cs">
+        <div class="cs-title">Рамки</div>
+        <div class="cr"><span class="cl">Цвет</span><input type="color" id="borderColorPick" value="#2d3358" oninput="setBorderColor(this.value)"></div>
+        <div class="rr"><span class="cl">Толщина</span><input type="range" id="borderWidth" min="0" max="8" value="1" step="0.5" oninput="setBorderWidth(this.value)"><span class="rv" id="borderWidthVal">1px</span></div>
+        <div class="rr"><span class="cl">Прозрачность</span><input type="range" id="borderOpacity" min="0" max="100" value="100" oninput="setBorderOpacity(this.value)"><span class="rv" id="borderOpacityVal">100%</span></div>
+        <div class="rr"><span class="cl">Скругление</span><input type="range" id="borderRadius" min="0" max="40" value="12" oninput="setBorderRadius(this.value)"><span class="rv" id="borderRadiusVal">12px</span></div>
       </div>
-    </div><div class="sep"></div>
+    </div>
 
-    <!-- HEADER -->
-    <div class="cs">
-      <div class="cs-title">Шапка и фон</div>
-      <div class="cr"><span class="cl">Цвет шапки</span><input type="color" id="headerColor" value="#131629" oninput="setHeaderColor(this.value)"><div class="rr" style="flex:1"><input type="range" id="headerOpacity" min="0" max="100" value="85" oninput="setHeaderOpacity(this.value)"><span class="rv" id="headerOpacityVal">85%</span></div></div>
-      <div class="cr"><span class="cl">Фон страницы</span><input type="color" id="pageBgColor" value="#0d0f1a" oninput="setPageBg(this.value)"></div>
-    </div><div class="sep"></div>
+    <!-- PAGE: RGB -->
+    <div class="cp-page" data-page="rgb">
+      <div class="cs">
+        <div class="cs-title">🌈 Что переливается</div>
+        <div class="rgb-row"><span style="font-size:13px;color:var(--text);flex:1">Рамки карточек</span><label class="toggle"><input type="checkbox" id="rgb_border" onchange="toggleRgb('border',this.checked)"><span class="tslider"></span></label></div>
+        <div class="rgb-row"><span style="font-size:13px;color:var(--text);flex:1">Текст заголовков</span><label class="toggle"><input type="checkbox" id="rgb_text" onchange="toggleRgb('text',this.checked)"><span class="tslider"></span></label></div>
+        <div class="rgb-row"><span style="font-size:13px;color:var(--text);flex:1">Текст заметок</span><label class="toggle"><input type="checkbox" id="rgb_metaText" onchange="toggleRgb('metaText',this.checked)"><span class="tslider"></span></label></div>
+        <div class="rgb-row"><span style="font-size:13px;color:var(--text);flex:1">Акцентный цвет</span><label class="toggle"><input type="checkbox" id="rgb_accent" onchange="toggleRgb('accent',this.checked)"><span class="tslider"></span></label></div>
+        <div class="rgb-row"><span style="font-size:13px;color:var(--text);flex:1">Шапка</span><label class="toggle"><input type="checkbox" id="rgb_header" onchange="toggleRgb('header',this.checked)"><span class="tslider"></span></label></div>
+        <div class="rgb-row"><span style="font-size:13px;color:var(--text);flex:1">Фон карточек</span><label class="toggle"><input type="checkbox" id="rgb_card" onchange="toggleRgb('card',this.checked)"><span class="tslider"></span></label></div>
+      </div>
+      <div class="sep"></div>
+      <div class="cs">
+        <div class="cs-title">Настройки RGB</div>
+        <div class="rr"><span class="cl">Скорость (сек)</span><input type="range" id="rgbSpeed" min="0.5" max="15" value="3" step="0.5" oninput="setRgbSpeed(this.value)"><span class="rv" id="rgbSpeedVal">3с</span></div>
+        <div class="rr"><span class="cl">Насыщенность</span><input type="range" id="rgbSat" min="20" max="100" value="80" oninput="setRgbSat(this.value)"><span class="rv" id="rgbSatVal">80%</span></div>
+        <div class="rr"><span class="cl">Яркость</span><input type="range" id="rgbLight" min="20" max="80" value="55" oninput="setRgbLight(this.value)"><span class="rv" id="rgbLightVal">55%</span></div>
+      </div>
+    </div>
 
-    <!-- FONT -->
-    <div class="cs">
-      <div class="cs-title">Шрифт</div>
-      <select class="font-select" id="fontSelect" onchange="setFont(this.value)">
-        <option value="Inter">Inter — стандартный</option>
-        <option value="Nunito">Nunito — мягкий</option>
-        <option value="Comfortaa">Comfortaa — округлый</option>
-        <option value="Raleway">Raleway — элегантный</option>
-        <option value="Unbounded">Unbounded — широкий</option>
-        <option value="Russo One">Russo One — жирный</option>
-        <option value="Press Start 2P">Press Start 2P — Minecraft</option>
-        <option value="Fira Code">Fira Code — моно (мелкий)</option>
-      </select>
-      <div class="rr"><span class="cl">Размер текста</span><input type="range" id="fontSize" min="11" max="20" value="15" oninput="setFontSize(this.value)"><span class="rv" id="fontSizeVal">15px</span></div>
-    </div><div class="sep"></div>
+    <!-- PAGE: UI -->
+    <div class="cp-page" data-page="ui">
+      <div class="cs">
+        <div class="cs-title">Акцентный цвет</div>
+        <div class="color-grid">
+          <div class="swatch" style="background:#7c5cfc" onclick="setAccent('#7c5cfc')"></div>
+          <div class="swatch" style="background:#06b6d4" onclick="setAccent('#06b6d4')"></div>
+          <div class="swatch" style="background:#f97316" onclick="setAccent('#f97316')"></div>
+          <div class="swatch" style="background:#ec4899" onclick="setAccent('#ec4899')"></div>
+          <div class="swatch" style="background:#22c55e" onclick="setAccent('#22c55e')"></div>
+          <div class="swatch" style="background:#f43f5e" onclick="setAccent('#f43f5e')"></div>
+          <div class="swatch" style="background:#eab308" onclick="setAccent('#eab308')"></div>
+          <div class="swatch" style="background:#38bdf8" onclick="setAccent('#38bdf8')"></div>
+          <div class="swatch" style="background:#a3e635" onclick="setAccent('#a3e635')"></div>
+          <div class="swatch" style="background:#ffffff" onclick="setAccent('#ffffff')"></div>
+          <input type="color" id="accentPicker" value="#7c5cfc" oninput="setAccent(this.value)">
+        </div>
+      </div>
+      <div class="sep"></div>
+      <div class="cs">
+        <div class="cs-title">Шапка</div>
+        <div class="cr"><span class="cl">Цвет</span><input type="color" id="headerColor" value="#131629" oninput="setHeaderColor(this.value)">
+          <div class="rr" style="flex:1"><input type="range" id="headerOpacity" min="0" max="100" value="85" oninput="setHeaderOpacity(this.value)"><span class="rv" id="headerOpacityVal">85%</span></div>
+        </div>
+        <div class="cr"><span class="cl">Фон страницы</span><input type="color" id="pageBgColor" value="#0d0f1a" oninput="setPageBg(this.value)"></div>
+      </div>
+      <div class="sep"></div>
+      <div class="cs">
+        <div class="cs-title">Шрифт</div>
+        <select class="font-select" id="fontSelect" onchange="setFont(this.value)">
+          <option value="Inter">Inter — стандартный</option>
+          <option value="Nunito">Nunito — мягкий</option>
+          <option value="Comfortaa">Comfortaa — округлый</option>
+          <option value="Raleway">Raleway — элегантный</option>
+          <option value="Unbounded">Unbounded — широкий</option>
+          <option value="Russo One">Russo One — жирный</option>
+          <option value="Press Start 2P">Press Start 2P — Minecraft</option>
+          <option value="Fira Code">Fira Code — моно</option>
+        </select>
+        <div class="rr"><span class="cl">Размер</span><input type="range" id="fontSize" min="11" max="20" value="15" oninput="setFontSize(this.value)"><span class="rv" id="fontSizeVal">15px</span></div>
+      </div>
+      <div class="sep"></div>
+      <div class="cs">
+        <div class="cs-title">Цвета вкладок</div>
+        <div class="cr"><span class="cl">🎌 Аниме</span><input type="color" id="tabAnime" value="#f97316" oninput="setTabColor('anime',this.value)"></div>
+        <div class="cr"><span class="cl">🎮 Игры</span><input type="color" id="tabGames" value="#06b6d4" oninput="setTabColor('games',this.value)"></div>
+        <div class="cr"><span class="cl">📺 Сериалы</span><input type="color" id="tabSeries" value="#a855f7" oninput="setTabColor('series',this.value)"></div>
+        <div class="cr"><span class="cl">🎬 Фильмы</span><input type="color" id="tabFilms" value="#ec4899" oninput="setTabColor('films',this.value)"></div>
+      </div>
+      <div class="sep"></div>
+      <div class="cs">
+        <div class="cs-title">Элементы интерфейса</div>
+        <div class="rgb-row"><span class="cl" style="font-size:13px;color:var(--text)">Показывать статистику</span><label class="toggle"><input type="checkbox" id="showStatsToggle" checked onchange="toggleShowStats(this.checked)"><span class="tslider"></span></label></div>
+        <div class="rgb-row"><span class="cl" style="font-size:13px;color:var(--text)">Показывать поиск</span><label class="toggle"><input type="checkbox" id="showSearchToggle" checked onchange="toggleShowSearch(this.checked)"><span class="tslider"></span></label></div>
+      </div>
+      <div class="sep"></div>
+      <button class="reset-sm" style="width:100%;padding:10px;font-size:13px;" onclick="resetAllCustom()">🔄 Сбросить всё оформление</button>
+    </div>
 
-    <!-- TAB COLORS -->
-    <div class="cs">
-      <div class="cs-title">Цвета вкладок</div>
-      <div class="cr"><span class="cl">🎌 Аниме</span><input type="color" id="tabAnime" value="#f97316" oninput="setTabColor('anime',this.value)"></div>
-      <div class="cr"><span class="cl">🎮 Игры</span><input type="color" id="tabGames" value="#06b6d4" oninput="setTabColor('games',this.value)"></div>
-      <div class="cr"><span class="cl">📺 Сериалы</span><input type="color" id="tabSeries" value="#a855f7" oninput="setTabColor('series',this.value)"></div>
-      <div class="cr"><span class="cl">🎬 Фильмы</span><input type="color" id="tabFilms" value="#ec4899" oninput="setTabColor('films',this.value)"></div>
-    </div><div class="sep"></div>
+    <!-- PAGE: ICONS -->
+    <div class="cp-page" data-page="icons">
+      <div class="cs">
+        <div class="cs-title">Все иконки приложения</div>
+        <div id="iconRowsContainer"></div>
+      </div>
+    </div>
 
-    <!-- ICONS -->
-    <div class="cs">
-      <div class="cs-title">Иконки вкладок</div>
-      <div class="cr"><span style="font-size:18px" id="pi-anime">🎌</span><img id="pimg-anime" class="icon-prev-img" alt=""><span class="cl">Аниме</span><button class="upload-btn" onclick="document.getElementById('if-anime').click()">Изменить</button><button class="reset-sm" onclick="resetIcon('anime')">✕</button><input type="file" id="if-anime" accept="image/*" onchange="loadIcon(this,'anime')"></div>
-      <div class="cr"><span style="font-size:18px" id="pi-games">🎮</span><img id="pimg-games" class="icon-prev-img" alt=""><span class="cl">Игры</span><button class="upload-btn" onclick="document.getElementById('if-games').click()">Изменить</button><button class="reset-sm" onclick="resetIcon('games')">✕</button><input type="file" id="if-games" accept="image/*" onchange="loadIcon(this,'games')"></div>
-      <div class="cr"><span style="font-size:18px" id="pi-series">📺</span><img id="pimg-series" class="icon-prev-img" alt=""><span class="cl">Сериалы</span><button class="upload-btn" onclick="document.getElementById('if-series').click()">Изменить</button><button class="reset-sm" onclick="resetIcon('series')">✕</button><input type="file" id="if-series" accept="image/*" onchange="loadIcon(this,'series')"></div>
-      <div class="cr"><span style="font-size:18px" id="pi-films">🎬</span><img id="pimg-films" class="icon-prev-img" alt=""><span class="cl">Фильмы</span><button class="upload-btn" onclick="document.getElementById('if-films').click()">Изменить</button><button class="reset-sm" onclick="resetIcon('films')">✕</button><input type="file" id="if-films" accept="image/*" onchange="loadIcon(this,'films')"></div>
-    </div><div class="sep"></div>
+    <!-- PAGE: CATS -->
+    <div class="cp-page" data-page="cats">
+      <div class="cs">
+        <div class="cs-title">Добавить категорию</div>
+        <div class="add-cat-row">
+          <input id="newCatIcon" placeholder="📂" maxlength="4" style="width:52px;text-align:center;flex:none">
+          <input id="newCatName" placeholder="Название категории" maxlength="20">
+          <button onclick="addCustomCat();renderCustomCatList()">+</button>
+        </div>
+      </div>
+      <div class="sep"></div>
+      <div class="cs">
+        <div class="cs-title">Пользовательские категории</div>
+        <div id="customCatList"></div>
+      </div>
+    </div>
 
-    <button class="reset-sm" style="width:100%;padding:10px;font-size:13px;" onclick="resetAllCustom()">🔄 Сбросить всё оформление</button>
   </div>
 </div>
 
@@ -401,8 +309,12 @@ input:checked+.slider:before{transform:translateX(16px);}
 <div class="overlay" id="overlay" onclick="maybeClose(event)">
   <div class="modal">
     <div class="modal-title" id="modalTitle">Добавить</div>
+    <div class="field"><label>Категория</label>
+      <select id="inputCat"></select>
+    </div>
     <div class="field"><label>Название *</label><input id="inputTitle" placeholder="Введи название..." maxlength="120"></div>
-    <div class="field"><label>Заметка (опционально)</label><textarea id="inputNote" placeholder="Жанр, откуда узнал, ссылка..."></textarea></div>
+    <div class="field"><label>Заметка</label><textarea id="inputNote" placeholder="Жанр, откуда узнал..."></textarea></div>
+    <div class="field"><label>Ссылка (необязательно)</label><input id="inputLink" placeholder="https://..." type="url"></div>
     <div class="btn-row">
       <button class="btn btn-secondary" onclick="closeModal()">Отмена</button>
       <button class="btn btn-primary" id="saveBtn" onclick="saveItem()">Сохранить</button>
@@ -410,251 +322,7 @@ input:checked+.slider:before{transform:translateX(16px);}
   </div>
 </div>
 
-<!-- RGB STYLE TAG -->
-<style id="rgbStyle"></style>
-
-<script>
-// ===== JSONBIN =====
-const API_BASE='https://api.jsonbin.io/v3';
-let API_KEY='',BIN_ID='',items={},currentTab='anime',currentFilter='all',currentSort='date_desc',editingId=null,isSaving=false,pollTimer=null;
-
-// ===== DEFAULTS =====
-const CD={
-  bg:null,bgOpacity:100,blurAmt:12,
-  accent:'#7c5cfc',
-  cardBgColor:'#1e2340',cardBgOpacity:80,cardTextColor:'#e8eaf6',
-  borderColorRaw:'#2d3358',borderWidth:1,borderOpacity:100,borderRadius:12,
-  headerColor:'#131629',headerOpacity:85,pageBgColor:'#0d0f1a',
-  font:'Inter',fontSize:15,
-  tabAnime:'#f97316',tabGames:'#06b6d4',tabSeries:'#a855f7',tabFilms:'#ec4899',
-  icons:{anime:null,games:null,series:null,films:null},
-  rgb:{border:false,text:false,accent:false,header:false,card:false,speed:3,sat:80,light:55}
-};
-let C=JSON.parse(JSON.stringify(CD));
-
-// ===== RGB ENGINE =====
-let rgbHue=0, rgbRaf=null;
-function startRgb(){
-  if(rgbRaf) return;
-  function tick(){
-    rgbHue=(rgbHue+0.5)%360;
-    applyRgbFrame();
-    rgbRaf=requestAnimationFrame(tick);
-  }
-  rgbRaf=requestAnimationFrame(tick);
-}
-function stopRgb(){
-  if(rgbRaf){cancelAnimationFrame(rgbRaf);rgbRaf=null;}
-}
-function anyRgbOn(){return Object.keys(C.rgb).filter(k=>k!=='speed'&&k!=='sat'&&k!=='light').some(k=>C.rgb[k]);}
-function hslStr(h){return `hsl(${h},${C.rgb.sat}%,${C.rgb.light}%)`;}
-function hslRgba(h,a){return `hsla(${h},${C.rgb.sat}%,${C.rgb.light}%,${a})`;}
-
-function applyRgbFrame(){
-  const h=rgbHue, s=C.rgb.sat, l=C.rgb.light;
-  const r=document.documentElement;
-  const speed=C.rgb.speed;
-  // We use CSS animation for smooth performance where possible
-  // For JS-driven ones, update directly
-  if(C.rgb.border){
-    const bc=`hsla(${h},${s}%,${l}%,${C.borderOpacity/100||1})`;
-    r.style.setProperty('--border-color', bc);
-  }
-  if(C.rgb.text){
-    document.querySelectorAll('.item-title').forEach(el=>el.style.color=hslStr(h));
-  }
-  if(C.rgb.accent){
-    r.style.setProperty('--accent', hslStr(h));
-    r.style.setProperty('--accent2', hslStr((h+30)%360));
-    r.style.setProperty('--accent-glow', hslRgba(h,0.3));
-  }
-  if(C.rgb.header){
-    r.style.setProperty('--header-bg', hslRgba(h,C.headerOpacity/100));
-  }
-  if(C.rgb.card){
-    r.style.setProperty('--card-bg', hslRgba(h,C.cardBgOpacity/100));
-  }
-  rgbHue=(rgbHue + 360/(60*speed))%360;
-}
-
-function toggleRgb(key,val){
-  C.rgb[key]=val; saveCustom();
-  if(anyRgbOn()) startRgb(); else { stopRgb(); applyCustom(); }
-}
-function setRgbSpeed(v){C.rgb.speed=+v;document.getElementById('rgbSpeedVal').textContent=v+'с';saveCustom();}
-function setRgbSat(v){C.rgb.sat=+v;document.getElementById('rgbSatVal').textContent=v+'%';saveCustom();}
-function setRgbLight(v){C.rgb.light=+v;document.getElementById('rgbLightVal').textContent=v+'%';saveCustom();}
-
-// ===== INIT =====
-window.addEventListener('load',()=>{
-  loadCustom();
-  API_KEY=localStorage.getItem('wl_apikey')||'';
-  BIN_ID=localStorage.getItem('wl_binid')||'';
-  if(API_KEY&&BIN_ID){showMain();loadFromBin();startPolling();}
-  else{showSetup();if(API_KEY){document.getElementById('apiKeyInput').value=API_KEY;document.getElementById('binFieldWrap').style.display='flex';}}
-});
-
-// ===== CUSTOM =====
-function loadCustom(){
-  try{const s=localStorage.getItem('wl_custom');if(s){const p=JSON.parse(s);C={...JSON.parse(JSON.stringify(CD)),...p};if(!C.icons)C.icons={...CD.icons};if(!C.rgb)C.rgb={...CD.rgb};}}catch(e){}
-  applyCustom();syncControls();
-  if(anyRgbOn())startRgb();
-}
-function saveCustom(){localStorage.setItem('wl_custom',JSON.stringify(C));}
-function resetAllCustom(){if(!confirm('Сбросить всё оформление?'))return;stopRgb();C=JSON.parse(JSON.stringify(CD));saveCustom();applyCustom();syncControls();}
-
-function hexToRgb(hex){const r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);return`${r},${g},${b}`;}
-function lighten(hex,a){const n=parseInt(hex.replace('#',''),16);const r=Math.min(255,(n>>16)+a),g=Math.min(255,((n>>8)&0xff)+a),b=Math.min(255,(n&0xff)+a);return'#'+((1<<24)+(r<<16)+(g<<8)+b).toString(16).slice(1);}
-
-function applyCustom(){
-  const r=document.documentElement;
-  if(!C.rgb.accent){r.style.setProperty('--accent',C.accent);r.style.setProperty('--accent2',lighten(C.accent,30));r.style.setProperty('--accent-glow',C.accent+'40');}
-  if(!C.rgb.card) r.style.setProperty('--card-bg',`rgba(${hexToRgb(C.cardBgColor)},${C.cardBgOpacity/100})`);
-  r.style.setProperty('--card-text',C.cardTextColor);
-  if(!C.rgb.border) r.style.setProperty('--border-color',`rgba(${hexToRgb(C.borderColorRaw)},${C.borderOpacity/100})`);
-  r.style.setProperty('--border-width',C.borderWidth+'px');
-  r.style.setProperty('--border-radius',C.borderRadius+'px');
-  if(!C.rgb.header) r.style.setProperty('--header-bg',`rgba(${hexToRgb(C.headerColor)},${C.headerOpacity/100})`);
-  r.style.setProperty('--bg2',`rgba(${hexToRgb(C.headerColor)},${Math.max(0.3,C.headerOpacity/100-0.1)})`);
-  r.style.setProperty('--bg3',`rgba(${hexToRgb(C.headerColor)},${Math.max(0.4,C.headerOpacity/100)})`);
-  r.style.setProperty('--bg',C.pageBgColor);
-  document.body.style.background=C.pageBgColor;
-  // font
-  const fontMap={'Press Start 2P':"'Press Start 2P',monospace",'Fira Code':"'Fira Code',monospace",'Russo One':"'Russo One',sans-serif",'Unbounded':"'Unbounded',sans-serif",'Comfortaa':"'Comfortaa',cursive",'Raleway':"'Raleway',sans-serif",'Nunito':"'Nunito',sans-serif",'Inter':"'Inter',sans-serif"};
-  r.style.setProperty('--font', fontMap[C.font]||"'Inter',sans-serif");
-  document.body.style.fontSize=C.fontSize+'px';
-  // font class for overflow fix
-  document.body.className=C.font==='Press Start 2P'?'font-ps2':C.font==='Fira Code'?'font-fira':'';
-  // tab colors
-  r.style.setProperty('--tab-anime',C.tabAnime);r.style.setProperty('--tab-games',C.tabGames);
-  r.style.setProperty('--tab-series',C.tabSeries);r.style.setProperty('--tab-films',C.tabFilms);
-  // bg
-  const bg=document.getElementById('bgLayer');
-  if(C.bg){bg.style.backgroundImage=`url(${C.bg})`;bg.style.opacity=C.bgOpacity/100;document.getElementById('bgPreview').src=C.bg;document.getElementById('bgPreview').classList.add('show');}
-  else{bg.style.backgroundImage='';bg.style.opacity=1;document.getElementById('bgPreview').classList.remove('show');}
-  // blur
-  document.querySelectorAll('header,.tab,.body-wrap,.setup-wrap').forEach(el=>{el.style.backdropFilter=`blur(${C.blurAmt}px)`;el.style.webkitBackdropFilter=`blur(${C.blurAmt}px)`;});
-  // icons
-  const def={anime:'🎌',games:'🎮',series:'📺',films:'🎬'};
-  ['anime','games','series','films'].forEach(cat=>{
-    const ic=C.icons[cat];
-    ['icon-','pi-'].forEach(pfx=>{const el=document.getElementById(pfx+cat);if(el)el.innerHTML=ic?`<img src="${ic}" style="width:22px;height:22px;object-fit:cover;border-radius:4px;">`:def[cat];});
-    const pi=document.getElementById('pimg-'+cat);
-    if(pi){if(ic){pi.src=ic;pi.classList.add('show');}else pi.classList.remove('show');}
-  });
-  // rgb text — reset if off
-  if(!C.rgb.text) document.querySelectorAll('.item-title').forEach(el=>el.style.color='');
-}
-
-function syncControls(){
-  const sv=(id,v)=>{const el=document.getElementById(id);if(el)el.value=v;};
-  const st=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
-  sv('bgOpacity',C.bgOpacity);st('bgOpacityVal',C.bgOpacity+'%');
-  sv('blurAmt',C.blurAmt);st('blurVal',C.blurAmt+'px');
-  sv('cardBgColor',C.cardBgColor);sv('cardBgOpacity',C.cardBgOpacity);st('cardBgOpacityVal',C.cardBgOpacity+'%');
-  sv('cardTextColor',C.cardTextColor);
-  sv('borderColorPick',C.borderColorRaw);sv('borderWidth',C.borderWidth);st('borderWidthVal',C.borderWidth+'px');
-  sv('borderOpacity',C.borderOpacity);st('borderOpacityVal',C.borderOpacity+'%');
-  sv('borderRadius',C.borderRadius);st('borderRadiusVal',C.borderRadius+'px');
-  sv('headerColor',C.headerColor);sv('headerOpacity',C.headerOpacity);st('headerOpacityVal',C.headerOpacity+'%');
-  sv('pageBgColor',C.pageBgColor);sv('accentPicker',C.accent);
-  sv('fontSelect',C.font);sv('fontSize',C.fontSize);st('fontSizeVal',C.fontSize+'px');
-  sv('tabAnime',C.tabAnime);sv('tabGames',C.tabGames);sv('tabSeries',C.tabSeries);sv('tabFilms',C.tabFilms);
-  // rgb
-  ['border','text','accent','header','card'].forEach(k=>{const el=document.getElementById('rgb'+k.charAt(0).toUpperCase()+k.slice(1));if(el)el.checked=C.rgb[k];});
-  sv('rgbSpeed',C.rgb.speed);st('rgbSpeedVal',C.rgb.speed+'с');
-  sv('rgbSat',C.rgb.sat);st('rgbSatVal',C.rgb.sat+'%');
-  sv('rgbLight',C.rgb.light);st('rgbLightVal',C.rgb.light+'%');
-}
-
-// setters
-function setBgOpacity(v){C.bgOpacity=+v;document.getElementById('bgOpacityVal').textContent=v+'%';document.getElementById('bgLayer').style.opacity=v/100;saveCustom();}
-function setBlur(v){C.blurAmt=+v;document.getElementById('blurVal').textContent=v+'px';document.querySelectorAll('header,.tab,.body-wrap,.setup-wrap').forEach(el=>{el.style.backdropFilter=`blur(${v}px)`;el.style.webkitBackdropFilter=`blur(${v}px)`;});saveCustom();}
-function setCardBg(v){C.cardBgColor=v;if(!C.rgb.card)document.documentElement.style.setProperty('--card-bg',`rgba(${hexToRgb(v)},${C.cardBgOpacity/100})`);saveCustom();}
-function setCardBgOpacity(v){C.cardBgOpacity=+v;document.getElementById('cardBgOpacityVal').textContent=v+'%';if(!C.rgb.card)document.documentElement.style.setProperty('--card-bg',`rgba(${hexToRgb(C.cardBgColor)},${v/100})`);saveCustom();}
-function setCardText(v){C.cardTextColor=v;document.documentElement.style.setProperty('--card-text',v);saveCustom();}
-function setBorderColor(v){C.borderColorRaw=v;if(!C.rgb.border)document.documentElement.style.setProperty('--border-color',`rgba(${hexToRgb(v)},${C.borderOpacity/100})`);saveCustom();}
-function setBorderWidth(v){C.borderWidth=+v;document.getElementById('borderWidthVal').textContent=v+'px';document.documentElement.style.setProperty('--border-width',v+'px');saveCustom();}
-function setBorderOpacity(v){C.borderOpacity=+v;document.getElementById('borderOpacityVal').textContent=v+'%';if(!C.rgb.border)document.documentElement.style.setProperty('--border-color',`rgba(${hexToRgb(C.borderColorRaw)},${v/100})`);saveCustom();}
-function setBorderRadius(v){C.borderRadius=+v;document.getElementById('borderRadiusVal').textContent=v+'px';document.documentElement.style.setProperty('--border-radius',v+'px');saveCustom();}
-function setHeaderColor(v){C.headerColor=v;if(!C.rgb.header)applyCustom();saveCustom();}
-function setHeaderOpacity(v){C.headerOpacity=+v;document.getElementById('headerOpacityVal').textContent=v+'%';if(!C.rgb.header)applyCustom();saveCustom();}
-function setPageBg(v){C.pageBgColor=v;document.documentElement.style.setProperty('--bg',v);document.body.style.background=v;saveCustom();}
-function setAccent(v){C.accent=v;if(!C.rgb.accent){document.documentElement.style.setProperty('--accent',v);document.documentElement.style.setProperty('--accent2',lighten(v,30));document.documentElement.style.setProperty('--accent-glow',v+'40');}saveCustom();}
-function setFont(v){C.font=v;applyCustom();saveCustom();}
-function setFontSize(v){C.fontSize=+v;document.getElementById('fontSizeVal').textContent=v+'px';document.body.style.fontSize=v+'px';document.documentElement.style.setProperty('--font-size',v+'px');saveCustom();}
-function setTabColor(cat,v){C['tab'+cat.charAt(0).toUpperCase()+cat.slice(1)]=v;document.documentElement.style.setProperty('--tab-'+cat,v);saveCustom();}
-function loadBg(inp){const f=inp.files[0];if(!f)return;const r=new FileReader();r.onload=e=>{C.bg=e.target.result;saveCustom();applyCustom();};r.readAsDataURL(f);}
-function removeBg(){C.bg=null;saveCustom();applyCustom();}
-function loadIcon(inp,cat){const f=inp.files[0];if(!f)return;const r=new FileReader();r.onload=e=>{C.icons[cat]=e.target.result;saveCustom();applyCustom();};r.readAsDataURL(f);}
-function resetIcon(cat){C.icons[cat]=null;saveCustom();applyCustom();}
-function toggleCustom(){document.getElementById('customPanel').classList.toggle('open');document.getElementById('panelDim').classList.toggle('show');}
-
-// ===== SETUP =====
-function showSetup(){document.getElementById('setupScreen').classList.add('visible');document.getElementById('mainApp').style.display='none';setSyncState('error','не настроен');}
-function showMain(){document.getElementById('setupScreen').classList.remove('visible');document.getElementById('mainApp').style.display='flex';}
-function resetSettings(){if(!confirm('Сбросить настройки подключения?'))return;localStorage.removeItem('wl_apikey');localStorage.removeItem('wl_binid');clearInterval(pollTimer);API_KEY='';BIN_ID='';items={};document.getElementById('apiKeyInput').value='';document.getElementById('binIdInput').value='';showSetup();}
-document.getElementById('apiKeyInput').addEventListener('input',()=>{document.getElementById('binFieldWrap').style.display=document.getElementById('apiKeyInput').value.trim()?'flex':'none';});
-async function connectBin(){
-  const key=document.getElementById('apiKeyInput').value.trim(),bid=document.getElementById('binIdInput').value.trim();
-  if(!key){showSetupError('Введи Secret Key');return;}
-  const btn=document.getElementById('connectBtn');btn.disabled=true;btn.textContent='Подключаем...';hideSetupError();API_KEY=key;
-  if(bid){const ok=await tryLoadBin(bid);if(!ok){btn.disabled=false;btn.textContent='Подключить';return;}BIN_ID=bid;}
-  else{const id=await createBin();if(!id){btn.disabled=false;btn.textContent='Подключить';return;}BIN_ID=id;alert('✅ Готово! Твой Bin ID:\n\n'+BIN_ID+'\n\nОтправь его второму человеку.');}
-  localStorage.setItem('wl_apikey',API_KEY);localStorage.setItem('wl_binid',BIN_ID);showMain();startPolling();
-}
-async function tryLoadBin(id){try{const r=await fetch(`${API_BASE}/b/${id}/latest`,{headers:{'X-Master-Key':API_KEY}});if(!r.ok){showSetupError('Не удалось загрузить Bin. ('+r.status+')');return false;}const d=await r.json();items=d.record?.items||{};render();setSyncState('live','синхронизировано');return true;}catch(e){showSetupError('Ошибка: '+e.message);return false;}}
-async function createBin(){try{const r=await fetch(`${API_BASE}/b`,{method:'POST',headers:{'Content-Type':'application/json','X-Master-Key':API_KEY,'X-Bin-Name':'watchlist','X-Bin-Private':'false'},body:JSON.stringify({items:{}})});if(!r.ok){showSetupError('Не удалось создать Bin. ('+r.status+')');return null;}const d=await r.json();return d.metadata?.id||null;}catch(e){showSetupError('Ошибка: '+e.message);return null;}}
-function showSetupError(m){const e=document.getElementById('setupError');e.textContent='⚠️ '+m;e.style.display='block';}
-function hideSetupError(){document.getElementById('setupError').style.display='none';}
-
-// ===== SYNC =====
-function setSyncState(s,l){document.getElementById('syncDot').className='sync-dot '+s;document.getElementById('syncLabel').textContent=l;}
-async function loadFromBin(){if(!API_KEY||!BIN_ID)return;setSyncState('loading','загрузка...');try{const r=await fetch(`${API_BASE}/b/${BIN_ID}/latest`,{headers:{'X-Master-Key':API_KEY}});if(!r.ok)throw new Error(r.status);const d=await r.json();items=d.record?.items||{};render();setSyncState('live','синхронизировано');}catch(e){setSyncState('error','ошибка');}}
-async function saveToBin(){if(!API_KEY||!BIN_ID||isSaving)return;isSaving=true;setSyncState('loading','сохранение...');try{const r=await fetch(`${API_BASE}/b/${BIN_ID}`,{method:'PUT',headers:{'Content-Type':'application/json','X-Master-Key':API_KEY},body:JSON.stringify({items})});if(!r.ok)throw new Error(r.status);setSyncState('live','сохранено');}catch(e){setSyncState('error','ошибка');}finally{isSaving=false;}}
-function startPolling(){clearInterval(pollTimer);pollTimer=setInterval(loadFromBin,15000);}
-
-// ===== TABS / FILTER / SORT =====
-function setTab(cat){currentTab=cat;document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.cat===cat));document.getElementById('fab').dataset.cat=cat;render();}
-function setFilter(f,btn){currentFilter=f;document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');render();}
-function setSort(v){currentSort=v;render();}
-
-// ===== RENDER =====
-function sortItems(arr){
-  const cp=[...arr];
-  switch(currentSort){
-    case 'date_asc':   return cp.sort((a,b)=>a.ts-b.ts);
-    case 'alpha_asc':  return cp.sort((a,b)=>a.title.localeCompare(b.title,'ru'));
-    case 'alpha_desc': return cp.sort((a,b)=>b.title.localeCompare(a.title,'ru'));
-    case 'status':     return cp.sort((a,b)=>a.done-b.done);
-    default:           return cp.sort((a,b)=>b.ts-a.ts);
-  }
-}
-function render(){
-  const list=document.getElementById('list');
-  let arr=Object.values(items).filter(i=>i.cat===currentTab);
-  if(currentFilter==='done')arr=arr.filter(i=>i.done);
-  else if(currentFilter==='todo')arr=arr.filter(i=>!i.done);
-  arr=sortItems(arr);
-  ['anime','games','series','films'].forEach(c=>{const cnt=Object.values(items).filter(i=>i.cat===c&&!i.done).length;const el=document.getElementById('badge-'+c);el.textContent=cnt;el.classList.toggle('show',cnt>0);});
-  if(!arr.length){const lbl={anime:'аниме',games:'игры',series:'сериалы',films:'фильмы'};const ico={anime:'🎌',games:'🎮',series:'📺',films:'🎬'};list.innerHTML=`<div class="empty" style="grid-column:1/-1"><div class="empty-icon">${ico[currentTab]}</div><p>Список ${lbl[currentTab]} пуст.<br>Нажми <strong>+</strong> чтобы добавить!</p></div>`;return;}
-  list.innerHTML=arr.map(item=>`<div class="item${item.done?' done':''}"><div class="check" onclick="toggleDone('${item.id}')">${item.done?'✓':''}</div><div class="item-body"><div class="item-title">${esc(item.title)}</div>${item.note?`<div class="item-meta">${esc(item.note)}</div>`:''}</div><div class="item-actions"><button class="btn-icon" onclick="editItem('${item.id}')">✏️</button><button class="btn-icon del" onclick="deleteItem('${item.id}')">🗑️</button></div></div>`).join('');
-  // re-apply rgb text if on
-  if(C.rgb.text&&rgbRaf) document.querySelectorAll('.item-title').forEach(el=>el.style.color=`hsl(${rgbHue},${C.rgb.sat}%,${C.rgb.light}%)`);
-}
-function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
-
-// ===== CRUD =====
-async function toggleDone(id){if(!items[id])return;items[id]={...items[id],done:!items[id].done};render();await saveToBin();}
-async function deleteItem(id){if(!items[id])return;delete items[id];render();await saveToBin();}
-function editItem(id){const item=items[id];if(!item)return;editingId=id;document.getElementById('modalTitle').textContent='Редактировать';document.getElementById('inputTitle').value=item.title;document.getElementById('inputNote').value=item.note||'';document.getElementById('overlay').classList.add('open');setTimeout(()=>document.getElementById('inputTitle').select(),50);}
-async function saveItem(){const title=document.getElementById('inputTitle').value.trim();if(!title){document.getElementById('inputTitle').focus();return;}const note=document.getElementById('inputNote').value.trim();const btn=document.getElementById('saveBtn');btn.disabled=true;btn.textContent='Сохраняем...';if(editingId){items[editingId]={...items[editingId],title,note};}else{const id=Date.now().toString(36)+Math.random().toString(36).slice(2,6);items[id]={id,cat:currentTab,title,note,done:false,ts:Date.now()};}render();closeModal();await saveToBin();btn.disabled=false;btn.textContent='Сохранить';}
-
-// ===== MODAL =====
-function openModal(){editingId=null;document.getElementById('modalTitle').textContent='Добавить';document.getElementById('inputTitle').value='';document.getElementById('inputNote').value='';document.getElementById('overlay').classList.add('open');setTimeout(()=>document.getElementById('inputTitle').focus(),100);}
-function closeModal(){document.getElementById('overlay').classList.remove('open');}
-function maybeClose(e){if(e.target===document.getElementById('overlay'))closeModal();}
-document.getElementById('inputTitle').addEventListener('keydown',e=>{if(e.key==='Enter')saveItem();});
-</script>
+<script src="custom.js"></script>
+<script src="app.js"></script>
 </body>
 </html>
