@@ -2,43 +2,64 @@
 const SUPA_URL = 'https://dspniootbeoebxefopia.supabase.co';
 const SUPA_KEY = 'sb_publishable_XvUI2M2jmfixsE3d_ikJZQ_DXp5WyKY';
 
-// ===== ПАРОЛЬ — поменяй на свой =====
-const APP_PASSWORD = '11120309';
-// ====================================
+// ===== ЗАЩИТА ВХОДОМ (пароль хранится только как хеш) =====
+const PW_SALT = 'wl-a00e84dea84412e4';
+const PW_ITER = 150000;
+const PW_HASH = '1ba1c8fa0387cfc44eea7169dd568f015103279dc32a45c2526acec241e06aad';
+// Новый пароль: открой makehash.html, введи пароль и вставь полученный хеш в PW_HASH
+// =========================================================
 
 let items = {}, currentTab = 'anime', currentFilter = 'all', currentSort = 'date_desc', editingId = null, isSaving = false, searchQuery = '';
 let realtimeChannel = null;
 
-// ===== PASSWORD CHECK =====
-function checkPassword() {
-  const stored = sessionStorage.getItem('wl_auth');
-  if (stored === APP_PASSWORD) return true;
-  return false;
+// ===== PASSWORD GATE =====
+async function hashPw(pw) {
+  const enc = new TextEncoder();
+  const key = await crypto.subtle.importKey('raw', enc.encode(pw), 'PBKDF2', false, ['deriveBits']);
+  const bits = await crypto.subtle.deriveBits(
+    { name: 'PBKDF2', salt: enc.encode(PW_SALT), iterations: PW_ITER, hash: 'SHA-256' }, key, 256);
+  return [...new Uint8Array(bits)].map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
-function showPasswordScreen() {
-  document.getElementById('passwordScreen').style.display = 'flex';
+function isAuthed() {
+  const saved = localStorage.getItem('wl_auth') || sessionStorage.getItem('wl_auth');
+  return saved === PW_HASH;
+}
+
+function lockApp() {
   document.getElementById('mainWrapper').style.display = 'none';
-  setTimeout(() => document.getElementById('passwordInput').focus(), 100);
+  document.getElementById('passwordScreen').classList.add('show');
+  setTimeout(() => document.getElementById('passwordInput').focus(), 80);
 }
 
-function hidePasswordScreen() {
-  document.getElementById('passwordScreen').style.display = 'none';
+function unlockApp() {
+  document.getElementById('passwordScreen').classList.remove('show');
   document.getElementById('mainWrapper').style.display = 'flex';
 }
 
-function submitPassword() {
-  const val = document.getElementById('passwordInput').value;
-  if (val === APP_PASSWORD) {
-    sessionStorage.setItem('wl_auth', APP_PASSWORD);
-    hidePasswordScreen();
+async function submitPassword() {
+  const input = document.getElementById('passwordInput');
+  const btn = document.getElementById('pwBtn');
+  const val = input.value;
+  if (!val) { input.focus(); return; }
+  btn.disabled = true;
+  const h = await hashPw(val);
+  btn.disabled = false;
+  if (h === PW_HASH) {
+    sessionStorage.removeItem('wl_auth'); localStorage.removeItem('wl_auth');
+    const remember = document.getElementById('pwRemember').checked;
+    (remember ? localStorage : sessionStorage).setItem('wl_auth', h);
+    input.value = '';
+    unlockApp();
     initApp();
   } else {
+    const box = document.getElementById('pwBox');
     const err = document.getElementById('passwordError');
-    err.style.display = 'block';
-    document.getElementById('passwordInput').value = '';
-    document.getElementById('passwordInput').focus();
-    setTimeout(() => err.style.display = 'none', 2000);
+    err.classList.add('show');
+    box.classList.remove('shake'); void box.offsetWidth; box.classList.add('shake');
+    input.value = ''; input.focus();
+    clearTimeout(window._pwErrT);
+    window._pwErrT = setTimeout(() => err.classList.remove('show'), 2200);
   }
 }
 
@@ -105,12 +126,8 @@ window.addEventListener('load', () => {
   loadCustom();
 
   // password gate
-  if (checkPassword()) {
-    hidePasswordScreen();
-    initApp();
-  } else {
-    showPasswordScreen();
-  }
+  if (isAuthed()) { unlockApp(); initApp(); }
+  else { lockApp(); }
 
   document.getElementById('passwordInput').addEventListener('keydown', e => { if(e.key==='Enter') submitPassword(); });
   document.getElementById('inputTitle').addEventListener('keydown', e => { if(e.key==='Enter') saveItem(); });
@@ -137,7 +154,7 @@ async function initApp() {
 }
 
 function showMain() { document.getElementById('setupScreen').classList.remove('visible'); document.getElementById('mainApp').style.display='flex'; }
-function resetSettings() { if(!confirm('Выйти из приложения?'))return; sessionStorage.removeItem('wl_auth'); location.reload(); }
+function resetSettings() { if(!confirm('Выйти из приложения?'))return; sessionStorage.removeItem('wl_auth'); localStorage.removeItem('wl_auth'); location.reload(); }
 function connectBin() { location.reload(); }
 function showSetupError(m) { const e=document.getElementById('setupError'); if(e){e.textContent='⚠️ '+m;e.style.display='block';} }
 function hideSetupError() { const e=document.getElementById('setupError'); if(e) e.style.display='none'; }
