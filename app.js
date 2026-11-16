@@ -2,6 +2,8 @@
 const SUPA_URL = 'https://dspniootbeoebxefopia.supabase.co';
 const SUPA_KEY = 'sb_publishable_XvUI2M2jmfixsE3d_ikJZQ_DXp5WyKY';
 
+// ===== ПАРОЛЬ — поменяй на свой =====
+const APP_PASSWORD = '11120309';
 // ====================================
 
 let items = {}, currentTab = 'anime', currentFilter = 'all', currentSort = 'date_desc', editingId = null, isSaving = false, searchQuery = '';
@@ -48,7 +50,6 @@ async function sbFetch(path, opts = {}) {
       'apikey': SUPA_KEY,
       'Authorization': `Bearer ${SUPA_KEY}`,
       'Content-Type': 'application/json',
-      'x-app-token': APP_TOKEN,
       ...(opts.headers || {})
     }
   });
