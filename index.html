@@ -3,19 +3,19 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>люблю</title>
+<title>люблю тебя</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Nunito:wght@400;600;700&family=Fira+Code:wght@400;500&family=Comfortaa:wght@400;600;700&family=Raleway:wght@400;600;700&family=Unbounded:wght@400;600;700&family=Russo+One&family=Press+Start+2P&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 <div id="passwordScreen">
-  <div class="pw-box">
-    <div class="pw-logo">хен <span>тай</span></div>
-    <div class="pw-title">Введи пароль для доступа</div>
-    <input class="pw-input" id="passwordInput" type="password" placeholder="••••••••" autocomplete="off">
+  <div class="pw-box" id="pwBox">
+    <div class="pw-lock">🔒</div>
+    <div class="pw-logo">хен<span>тай</span></div>
+    <input class="pw-input" id="passwordInput" type="password" placeholder="Пароль" autocomplete="current-password">
     <div class="pw-error" id="passwordError">Неверный пароль</div>
-    <button class="pw-btn" onclick="submitPassword()">Войти</button>
-    <div class="pw-hint">Пароль хранится только в этой вкладке</div>
+    <label class="pw-remember"><input type="checkbox" id="pwRemember"><span>Запомнить на этом устройстве</span></label>
+    <button class="pw-btn" id="pwBtn" onclick="submitPassword()">Войти</button>
   </div>
 </div>
 <div id="mainWrapper" style="display:none;flex-direction:column;min-height:100dvh;">
@@ -32,7 +32,7 @@
       <div class="header-row">
         <div class="logo">
           <span class="logo-icon" id="logoIcon" style="display:none"></span>
-          <span>наш <span>список</span></span>
+          <span>хен<span>тай</span></span>
         </div>
         <div class="header-right">
           <div class="sync-row">
