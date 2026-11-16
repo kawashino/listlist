@@ -3,11 +3,22 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>я<3тебя</title>
+<title>люблю</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Nunito:wght@400;600;700&family=Fira+Code:wght@400;500&family=Comfortaa:wght@400;600;700&family=Raleway:wght@400;600;700&family=Unbounded:wght@400;600;700&family=Russo+One&family=Press+Start+2P&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
+<div id="passwordScreen">
+  <div class="pw-box">
+    <div class="pw-logo">хен <span>тай</span></div>
+    <div class="pw-title">Введи пароль для доступа</div>
+    <input class="pw-input" id="passwordInput" type="password" placeholder="••••••••" autocomplete="off">
+    <div class="pw-error" id="passwordError">Неверный пароль</div>
+    <button class="pw-btn" onclick="submitPassword()">Войти</button>
+    <div class="pw-hint">Пароль хранится только в этой вкладке</div>
+  </div>
+</div>
+<div id="mainWrapper" style="display:none;flex-direction:column;min-height:100dvh;">
 <div id="bgLayer">
   <div id="bgImg"></div>
   <div id="bgGrad"></div>
@@ -21,7 +32,7 @@
       <div class="header-row">
         <div class="logo">
           <span class="logo-icon" id="logoIcon" style="display:none"></span>
-          <span>хен<span>тай</span></span>
+          <span>наш <span>список</span></span>
         </div>
         <div class="header-right">
           <div class="sync-row">
@@ -66,8 +77,8 @@
               <button class="filter-btn" onclick="setFilter('done',this)">Просмотрено</button>
             </div>
             <select class="sort-select" id="sortSelect" onchange="setSort(this.value)">
-              <option value="date_desc">Новые</option>
-              <option value="date_asc">Старые</option>
+              <option value="date_desc">📅 Новые</option>
+              <option value="date_asc">📅 Старые</option>
               <option value="alpha_asc">А→Я</option>
               <option value="alpha_desc">Я→А</option>
               <option value="status">По статусу</option>
@@ -287,6 +298,7 @@
   </div>
 </div>
 
+</div>
 <script src="custom.js"></script>
 <script src="app.js"></script>
 </body>
