@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>нехентай</title>
+<title>я<3тебя</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Nunito:wght@400;600;700&family=Fira+Code:wght@400;500&family=Comfortaa:wght@400;600;700&family=Raleway:wght@400;600;700&family=Unbounded:wght@400;600;700&family=Russo+One&family=Press+Start+2P&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 </head>
@@ -17,7 +17,6 @@
 <div id="app">
   <div class="desktop-wrap">
 
-    <!-- HEADER -->
     <header>
       <div class="header-row">
         <div class="logo">
@@ -27,13 +26,13 @@
         <div class="header-right">
           <div class="sync-row">
             <div id="syncDot" class="sync-dot loading"></div>
-            <span id="syncLabel" class="sync-label">настройка...</span>
+            <span id="syncLabel" class="sync-label">подключение...</span>
           </div>
           <button class="icon-btn" onclick="toggleCustom()" title="Кастомизация">🎨</button>
-          <button class="icon-btn" onclick="resetSettings()" title="Настройки подключения">⚙️</button>
+          <button class="icon-btn" onclick="resetSettings()" title="Перезагрузить">⚙️</button>
         </div>
       </div>
-      <div id="searchWrap" class="search-wrap" style="margin-top:8px;padding:0">
+      <div id="searchWrap" style="margin-top:8px">
         <div class="search-wrap-inner">
           <span class="search-icon" id="searchIconEl">🔍</span>
           <input class="search-input" id="searchInput" placeholder="Поиск по списку..." autocomplete="off">
@@ -41,29 +40,13 @@
       </div>
     </header>
 
-    <!-- SETUP -->
+    <!-- ERROR SCREEN -->
     <div class="setup-wrap" id="setupScreen">
-      <h2>⚙️ Первый запуск</h2>
-      <p>Для синхронизации между двумя людьми нужен бесплатный JSONBin.io аккаунт.</p>
+      <h2>⚠️ Ошибка подключения</h2>
+      <p>Не удалось подключиться к базе данных. Проверь интернет-соединение и попробуй снова.</p>
       <div class="sep"></div>
-      <div class="info-box"><b>Первый человек:</b> создаёт Bin, получает Bin ID, отправляет его второму.<br><b>Второй человек:</b> вводит тот же API Key и Bin ID — и оба видят один список.</div>
-      <ol>
-        <li>Зайди на <a href="https://jsonbin.io" target="_blank">jsonbin.io</a> → <strong>Sign Up</strong></li>
-        <li>После входа → <strong>API Keys</strong> → скопируй Secret Key</li>
-        <li>Вставь ниже и нажми «Подключить»</li>
-      </ol>
-      <div class="sfield">
-        <label>SECRET KEY с jsonbin.io</label>
-        <input id="apiKeyInput" type="password" placeholder="$2a$10$xxxxxxxxxxxxxxxxxxxxxxx..." autocomplete="off">
-        <small>Хранится только в этом браузере</small>
-      </div>
-      <div class="sfield" id="binFieldWrap" style="display:none">
-        <label>BIN ID <span style="font-weight:400;color:var(--text3)">(есть — вставь; нет — оставь пустым)</span></label>
-        <input id="binIdInput" placeholder="6xxxxxxxxxxxxxxxxxxxxxxx">
-        <small>Второй человек вводит тот же Bin ID что и первый</small>
-      </div>
-      <button class="btn-setup" id="connectBtn" onclick="connectBin()">Подключить</button>
       <p id="setupError" style="color:var(--del);font-size:13px;display:none;margin:0"></p>
+      <button class="btn-setup" id="connectBtn" onclick="location.reload()">🔄 Перезагрузить</button>
     </div>
 
     <!-- MAIN APP -->
@@ -71,15 +54,11 @@
       <nav class="tabs" id="tabsNav"></nav>
       <div class="body-wrap">
         <div class="content">
-
-          <!-- STATS -->
           <div class="stats-bar" id="statsBar">
             <div class="stat"><span class="stat-num" id="stat-total">0</span><span class="stat-label">Всего</span></div>
             <div class="stat"><span class="stat-num" id="stat-done" style="color:var(--done)">0</span><span class="stat-label">Просмотрено</span></div>
             <div class="stat"><span class="stat-num" id="stat-left">0</span><span class="stat-label">Осталось</span></div>
           </div>
-
-          <!-- TOOLBAR -->
           <div class="toolbar">
             <div class="filter-row">
               <button class="filter-btn active" onclick="setFilter('all',this)">Все</button>
@@ -87,14 +66,13 @@
               <button class="filter-btn" onclick="setFilter('done',this)">Просмотрено</button>
             </div>
             <select class="sort-select" id="sortSelect" onchange="setSort(this.value)">
-              <option value="date_desc">📅 Новые</option>
-              <option value="date_asc">📅 Старые</option>
+              <option value="date_desc">Новые</option>
+              <option value="date_asc">Старые</option>
               <option value="alpha_asc">А→Я</option>
               <option value="alpha_desc">Я→А</option>
               <option value="status">По статусу</option>
             </select>
           </div>
-
           <div id="list"></div>
         </div>
       </div>
@@ -115,13 +93,12 @@
     <div class="cp-tab active" data-tab="bg" onclick="switchCpTab('bg')">🖼 Фон</div>
     <div class="cp-tab" data-tab="cards" onclick="switchCpTab('cards')">🃏 Карточки</div>
     <div class="cp-tab" data-tab="rgb" onclick="switchCpTab('rgb')">🌈 RGB</div>
-    <div class="cp-tab" data-tab="ui" onclick="switchCpTab('ui')">🖥 Интерфейс</div>
+    <div class="cp-tab" data-tab="ui" onclick="switchCpTab('ui')">🖥 UI</div>
     <div class="cp-tab" data-tab="icons" onclick="switchCpTab('icons')">🖼 Иконки</div>
     <div class="cp-tab" data-tab="cats" onclick="switchCpTab('cats')">📂 Категории</div>
   </div>
   <div class="cp-body">
 
-    <!-- PAGE: BG -->
     <div class="cp-page active" data-page="bg">
       <div class="cs">
         <div class="cs-title">Изображение</div>
@@ -135,29 +112,27 @@
         <div class="rr"><span class="cl">Затемнение</span><input type="range" id="bgOverlayRange" min="0" max="90" value="0" oninput="setBgOverlay(this.value)"><span class="rv" id="bgOverlayVal">0%</span></div>
         <div class="cr"><span class="cl">Режим</span>
           <select class="cp-select" id="bgSizeSelect" onchange="setBgSize(this.value)" style="flex:1">
-            <option value="cover">Cover — заполнить (обрезать)</option>
-            <option value="contain">Contain — вписать целиком</option>
+            <option value="cover">Cover — заполнить</option>
+            <option value="contain">Contain — вписать</option>
             <option value="fill">Fill — растянуть</option>
             <option value="zoom">Zoom — масштаб вручную</option>
           </select>
         </div>
-        <div class="rr"><span class="cl">Масштаб (zoom)</span><input type="range" id="bgZoom" min="50" max="300" value="100" oninput="setBgZoom(this.value)"><span class="rv" id="bgZoomVal">100%</span></div>
-        <div class="cs-title" style="margin-top:4px">Позиция изображения</div>
+        <div class="rr"><span class="cl">Масштаб</span><input type="range" id="bgZoom" min="50" max="300" value="100" oninput="setBgZoom(this.value)"><span class="rv" id="bgZoomVal">100%</span></div>
+        <div class="cs-title" style="margin-top:4px">Позиция (перетащи точку)</div>
         <div class="bg-pos-pad" id="bgPosPad">
           <div class="bg-pos-dot" id="bgPosDot" style="left:50%;top:50%"></div>
-          <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:11px;color:rgba(255,255,255,0.3);pointer-events:none">Перетащи точку</div>
+          <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:11px;color:rgba(255,255,255,0.25);pointer-events:none">перетащи</div>
         </div>
       </div>
       <div class="sep"></div>
       <div class="cs">
-        <div class="cs-title">Градиентный фон</div>
-        <div class="rgb-row"><span class="cl" style="font-size:13px;color:var(--text)">Включить градиент</span>
+        <div class="cs-title">Градиент (вместо фото)</div>
+        <div class="rgb-row"><span class="cl" style="font-size:13px;color:var(--text)">Включить</span>
           <label class="toggle"><input type="checkbox" id="bgGradToggle" onchange="toggleBgGrad(this.checked)"><span class="tslider"></span></label>
         </div>
-        <div class="cr">
-          <span class="cl">Цвет A</span><input type="color" id="bgGradA" value="#1a0533" oninput="setBgGradA(this.value)">
-          <span class="cl">Цвет B</span><input type="color" id="bgGradB" value="#001a33" oninput="setBgGradB(this.value)">
-        </div>
+        <div class="cr"><span class="cl">Цвет A</span><input type="color" id="bgGradA" value="#1a0533" oninput="setBgGradA(this.value)">
+          <span class="cl">Цвет B</span><input type="color" id="bgGradB" value="#001a33" oninput="setBgGradB(this.value)"></div>
         <div class="rr"><span class="cl">Угол</span><input type="range" id="bgGradAngle" min="0" max="360" value="135" oninput="setBgGradAngle(this.value)"><span class="rv" id="bgGradAngleVal">135°</span></div>
       </div>
       <div class="sep"></div>
@@ -167,26 +142,23 @@
       </div>
     </div>
 
-    <!-- PAGE: CARDS -->
     <div class="cp-page" data-page="cards">
       <div class="cs">
         <div class="cs-title">Фон карточек</div>
         <div class="cr"><span class="cl">Цвет</span><input type="color" id="cardBgColor" value="#1e2340" oninput="setCardBg(this.value)">
-          <div class="rr" style="flex:1"><input type="range" id="cardBgOpacity" min="0" max="100" value="80" oninput="setCardBgOpacity(this.value)"><span class="rv" id="cardBgOpacityVal">80%</span></div>
-        </div>
+          <div class="rr" style="flex:1"><input type="range" id="cardBgOpacity" min="0" max="100" value="80" oninput="setCardBgOpacity(this.value)"><span class="rv" id="cardBgOpacityVal">80%</span></div></div>
       </div>
       <div class="sep"></div>
       <div class="cs">
-        <div class="cs-title">Текст в карточках</div>
+        <div class="cs-title">Текст</div>
         <div class="cr"><span class="cl">Заголовок</span><input type="color" id="cardTextColor" value="#e8eaf6" oninput="setCardText(this.value)"></div>
         <div class="cr"><span class="cl">Заметка</span><input type="color" id="cardMetaColor" value="#9095b5" oninput="setCardMeta(this.value)"></div>
       </div>
       <div class="sep"></div>
       <div class="cs">
-        <div class="cs-title">Тень карточек</div>
+        <div class="cs-title">Тень</div>
         <div class="rgb-row"><span class="cl" style="font-size:13px;color:var(--text)">Показывать тень</span>
-          <label class="toggle"><input type="checkbox" id="cardShadowToggle" checked onchange="toggleCardShadow(this.checked)"><span class="tslider"></span></label>
-        </div>
+          <label class="toggle"><input type="checkbox" id="cardShadowToggle" checked onchange="toggleCardShadow(this.checked)"><span class="tslider"></span></label></div>
       </div>
       <div class="sep"></div>
       <div class="cs">
@@ -198,7 +170,6 @@
       </div>
     </div>
 
-    <!-- PAGE: RGB -->
     <div class="cp-page" data-page="rgb">
       <div class="cs">
         <div class="cs-title">🌈 Что переливается</div>
@@ -211,14 +182,13 @@
       </div>
       <div class="sep"></div>
       <div class="cs">
-        <div class="cs-title">Настройки RGB</div>
+        <div class="cs-title">Настройки</div>
         <div class="rr"><span class="cl">Скорость (сек)</span><input type="range" id="rgbSpeed" min="0.5" max="15" value="3" step="0.5" oninput="setRgbSpeed(this.value)"><span class="rv" id="rgbSpeedVal">3с</span></div>
         <div class="rr"><span class="cl">Насыщенность</span><input type="range" id="rgbSat" min="20" max="100" value="80" oninput="setRgbSat(this.value)"><span class="rv" id="rgbSatVal">80%</span></div>
         <div class="rr"><span class="cl">Яркость</span><input type="range" id="rgbLight" min="20" max="80" value="55" oninput="setRgbLight(this.value)"><span class="rv" id="rgbLightVal">55%</span></div>
       </div>
     </div>
 
-    <!-- PAGE: UI -->
     <div class="cp-page" data-page="ui">
       <div class="cs">
         <div class="cs-title">Акцентный цвет</div>
@@ -238,10 +208,9 @@
       </div>
       <div class="sep"></div>
       <div class="cs">
-        <div class="cs-title">Шапка</div>
-        <div class="cr"><span class="cl">Цвет</span><input type="color" id="headerColor" value="#131629" oninput="setHeaderColor(this.value)">
-          <div class="rr" style="flex:1"><input type="range" id="headerOpacity" min="0" max="100" value="85" oninput="setHeaderOpacity(this.value)"><span class="rv" id="headerOpacityVal">85%</span></div>
-        </div>
+        <div class="cs-title">Шапка и фон</div>
+        <div class="cr"><span class="cl">Цвет шапки</span><input type="color" id="headerColor" value="#131629" oninput="setHeaderColor(this.value)">
+          <div class="rr" style="flex:1"><input type="range" id="headerOpacity" min="0" max="100" value="85" oninput="setHeaderOpacity(this.value)"><span class="rv" id="headerOpacityVal">85%</span></div></div>
         <div class="cr"><span class="cl">Фон страницы</span><input type="color" id="pageBgColor" value="#0d0f1a" oninput="setPageBg(this.value)"></div>
       </div>
       <div class="sep"></div>
@@ -269,35 +238,33 @@
       </div>
       <div class="sep"></div>
       <div class="cs">
-        <div class="cs-title">Элементы интерфейса</div>
-        <div class="rgb-row"><span class="cl" style="font-size:13px;color:var(--text)">Показывать статистику</span><label class="toggle"><input type="checkbox" id="showStatsToggle" checked onchange="toggleShowStats(this.checked)"><span class="tslider"></span></label></div>
-        <div class="rgb-row"><span class="cl" style="font-size:13px;color:var(--text)">Показывать поиск</span><label class="toggle"><input type="checkbox" id="showSearchToggle" checked onchange="toggleShowSearch(this.checked)"><span class="tslider"></span></label></div>
+        <div class="cs-title">Элементы</div>
+        <div class="rgb-row"><span class="cl" style="font-size:13px;color:var(--text)">Статистика</span><label class="toggle"><input type="checkbox" id="showStatsToggle" checked onchange="toggleShowStats(this.checked)"><span class="tslider"></span></label></div>
+        <div class="rgb-row"><span class="cl" style="font-size:13px;color:var(--text)">Поиск</span><label class="toggle"><input type="checkbox" id="showSearchToggle" checked onchange="toggleShowSearch(this.checked)"><span class="tslider"></span></label></div>
       </div>
       <div class="sep"></div>
-      <button class="reset-sm" style="width:100%;padding:10px;font-size:13px;" onclick="resetAllCustom()">🔄 Сбросить всё оформление</button>
+      <button class="reset-sm" style="width:100%;padding:10px;font-size:13px;" onclick="resetAllCustom()">🔄 Сбросить оформление</button>
     </div>
 
-    <!-- PAGE: ICONS -->
     <div class="cp-page" data-page="icons">
       <div class="cs">
-        <div class="cs-title">Все иконки приложения</div>
+        <div class="cs-title">Все иконки</div>
         <div id="iconRowsContainer"></div>
       </div>
     </div>
 
-    <!-- PAGE: CATS -->
     <div class="cp-page" data-page="cats">
       <div class="cs">
-        <div class="cs-title">Добавить категорию</div>
+        <div class="cs-title">Новая категория</div>
         <div class="add-cat-row">
           <input id="newCatIcon" placeholder="📂" maxlength="4" style="width:52px;text-align:center;flex:none">
-          <input id="newCatName" placeholder="Название категории" maxlength="20">
+          <input id="newCatName" placeholder="Название" maxlength="20">
           <button onclick="addCustomCat();renderCustomCatList()">+</button>
         </div>
       </div>
       <div class="sep"></div>
       <div class="cs">
-        <div class="cs-title">Пользовательские категории</div>
+        <div class="cs-title">Пользовательские</div>
         <div id="customCatList"></div>
       </div>
     </div>
@@ -309,9 +276,7 @@
 <div class="overlay" id="overlay" onclick="maybeClose(event)">
   <div class="modal">
     <div class="modal-title" id="modalTitle">Добавить</div>
-    <div class="field"><label>Категория</label>
-      <select id="inputCat"></select>
-    </div>
+    <div class="field"><label>Категория</label><select id="inputCat"></select></div>
     <div class="field"><label>Название *</label><input id="inputTitle" placeholder="Введи название..." maxlength="120"></div>
     <div class="field"><label>Заметка</label><textarea id="inputNote" placeholder="Жанр, откуда узнал..."></textarea></div>
     <div class="field"><label>Ссылка (необязательно)</label><input id="inputLink" placeholder="https://..." type="url"></div>
