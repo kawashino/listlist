@@ -1,7 +1,6 @@
 // ===== SUPABASE CONFIG =====
 const SUPA_URL = 'https://dspniootbeoebxefopia.supabase.co';
 const SUPA_KEY = 'sb_publishable_XvUI2M2jmfixsE3d_ikJZQ_DXp5WyKY';
-const APP_TOKEN = 'sladkayapopka'; // должен совпадать с токеном в Supabase RLS
 
 // ===== ПАРОЛЬ — поменяй на свой =====
 const APP_PASSWORD = '11120309';
