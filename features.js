@@ -254,10 +254,8 @@ addEventListener('load',()=>{
   document.head.appendChild(css);
   $('fPoster').insertAdjacentHTML('afterend','<button type="button" class="upload-btn" style="margin-top:6px" onclick="$(\'fPosterFile\').click()">📁 Загрузить с устройства</button><input type="file" id="fPosterFile" accept="image/*" onchange="upPoster(this)">');
   document.querySelector('[data-page="fx"]').insertAdjacentHTML('beforeend',`<div class="sep"></div><div class="cs"><div class="cs-title">Постеры</div>
-   <input class="cp-select" id="kTmdb" placeholder="TMDB API key (фильмы и сериалы)" value="${esc(KEY('tmdb'))}" onchange="localStorage.setItem('wl_tmdb',this.value.trim())">
-   <input class="cp-select" id="kRawg" placeholder="RAWG API key (игры)" value="${esc(KEY('rawg'))}" onchange="localStorage.setItem('wl_rawg',this.value.trim())">
    <button class="upload-btn" onclick="fillPosters()">🖼 Найти постеры для всех без обложки</button>
-   <div style="font-size:11px;color:var(--text3)">Ключи бесплатные: themoviedb.org/settings/api и rawg.io/apidocs. Хранятся только на этом устройстве.</div></div>`);
+   <div style="font-size:11px;color:var(--text3)">Источники: Shikimori, iTunes, Википедия. Ключи не нужны.</div></div>`);
 });
 
 /* ===== v4: хотим оба, карточка-детали, статистика, импорт, обои из сети ===== */
@@ -282,7 +280,7 @@ async function findInfo(i){
 }
 async function openInfo(id){
   const i=items[id];if(!i)return;infoId=id;$('info').classList.add('open');drawInfo();
-  if(!i.info||!i.info.ts){const inf=await findInfo(i),c=items[id];if(c)patch(id,{info:inf,poster:c.poster||inf.poster||'',total:c.total||inf.eps||0});}
+  if(!i.info||!i.info.ts||(!i.info.poster&&!i.poster)){const inf=await findInfo(i),c=items[id];if(c)patch(id,{info:inf,poster:c.poster||inf.poster||'',total:c.total||inf.eps||0});}
 }
 function showTrl(){$('trl').innerHTML=`<iframe src="${esc(items[infoId].info.trailer)}" allowfullscreen style="width:100%;aspect-ratio:16/9;border:0;border-radius:10px"></iframe>`;}
 function drawInfo(){
@@ -365,3 +363,50 @@ addEventListener('load',()=>{
    <div style="font-size:11px;color:var(--text3)">Pinterest: открой пин, ПКМ по картинке, «Копировать адрес изображения» (i.pinimg.com…). Ссылка на страницу пина не подойдёт.</div></div>`);
   updColl();
 });
+
+/* ===== v5: постеры без ключей (Shikimori, iTunes, Википедия) ===== */
+const J=async u=>(await fetch(u)).json();
+const SRC={
+  async shiki(q){
+    for(const h of ['shikimori.one','shikimori.me','shikimori.io']){
+      try{const a=await J(`https://${h}/api/animes?limit=4&search=${encodeURIComponent(q)}`);
+        const r=a.map(x=>({poster:x.image?.original?`https://${h}${x.image.original}`:'',year:(x.aired_on||'').slice(0,4),score:+x.score||'',eps:x.episodes||0}));
+        if(a[0]){try{const d=await J(`https://${h}/api/animes/${a[0].id}`);r[0].genres=(d.genres||[]).map(g=>g.russian||g.name).join(', ');r[0].desc=(d.description||'').replace(/\[[^\]]*\]/g,'').slice(0,600);}catch(e){}}
+        return r;}catch(e){}
+    }return[];
+  },
+  async jikan(q){try{return((await J('https://api.jikan.moe/v4/anime?limit=4&q='+encodeURIComponent(q))).data||[]).map(x=>({poster:x.images?.jpg?.image_url||'',year:x.year||'',genres:(x.genres||[]).map(g=>g.name).join(', '),desc:x.synopsis||'',score:x.score||'',eps:x.episodes||0,trailer:x.trailer?.embed_url||''}));}catch(e){return[];}},
+  async itunes(q,cat){try{const m=cat==='series'?'tvShow':'movie',e=cat==='series'?'tvSeason':'movie';
+    return((await J(`https://itunes.apple.com/search?term=${encodeURIComponent(q)}&media=${m}&entity=${e}&country=ru&limit=4`)).results||[]).map(x=>({poster:(x.artworkUrl100||'').replace('100x100bb','400x600bb'),year:(x.releaseDate||'').slice(0,4),genres:x.primaryGenreName||'',desc:x.longDescription||x.shortDescription||''}));}catch(e){return[];}},
+  async wiki(q,cat){
+    const w={anime:'аниме',films:'фильм',series:'сериал',games:'игра'}[cat]||'';
+    for(const l of ['ru','en']){
+      try{const d=await J(`https://${l}.wikipedia.org/w/api.php?action=query&generator=search&gsrlimit=4&gsrsearch=${encodeURIComponent(q+' '+(l==='ru'?w:''))}&prop=pageimages|extracts&piprop=thumbnail&pithumbsize=300&exintro=1&explaintext=1&exsentences=3&format=json&origin=*`);
+        const r=Object.values(d.query?.pages||{}).sort((a,b)=>a.index-b.index).map(p=>({poster:p.thumbnail?.source||'',desc:p.extract||''})).filter(x=>x.poster);
+        if(r.length)return r;}catch(e){}
+    }return[];
+  }
+};
+async function cands(q,cat){
+  const o=cat==='anime'?['shiki','jikan','wiki']:cat==='games'?['wiki']:['itunes','wiki'],out=[];
+  for(const k of o){out.push(...(await SRC[k](q,cat)).filter(x=>x.poster));if(out.length>=6)break;}
+  return out;
+}
+async function lookup(i){const b=(await cands(i.title,i.cat))[0]||{};return{ts:1,poster:b.poster||'',year:b.year||'',genres:b.genres||'',desc:b.desc||'',score:b.score||'',eps:b.eps||0,trailer:b.trailer||''};}
+async function findPoster(q,cat){return(await lookup({title:q,cat})).poster;}
+async function findInfo(i){return lookup(i);}
+async function fillPosters(){
+  const todo=Object.values(items).filter(i=>!i.poster);let n=0,ok=0;toast('Ищу постеры…');
+  for(const i of todo){const f=await lookup(i);n++;
+    if(f.poster){items[i.id]={...i,poster:f.poster,info:f,total:i.total||f.eps||0};ok++;try{await upsertItem(items[i.id]);}catch(e){}}
+    if(n%4==0){render();toast(`Постеры: ${ok} из ${n} (всего ${todo.length})`);}
+    await new Promise(r=>setTimeout(r,700));}
+  render();toast(`Готово: найдено ${ok} из ${n}`);
+}
+const _draw=drawInfo;drawInfo=function(){_draw();
+  $('infoBody').insertAdjacentHTML('beforeend','<div style="margin-top:12px"><div class="cr"><input id="pq" class="cp-select" placeholder="Название для поиска (англ. или оригинал)"><button class="upload-btn" onclick="pickPoster()">🖼 Найти</button></div><div id="posterPick" class="whgrid" style="margin-top:8px"></div></div>');};
+async function pickPoster(){
+  const i=items[infoId],g=$('posterPick');g.textContent='Ищу…';
+  const c=await cands(($('pq').value.trim())||i.title,i.cat);
+  g.innerHTML=c.map(x=>`<img src="${esc(x.poster)}" style="height:110px" onclick="patch('${i.id}',{poster:'${x.poster}'})">`).join('')||'Не нашлось. Попробуй другое название или вставь ссылку в форме.';
+}
