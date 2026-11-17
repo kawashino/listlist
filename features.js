@@ -23,13 +23,13 @@ function render(){
   else if(currentFilter==='done')arr=arr.filter(i=>sOf(i)==='done');
   else if(currentFilter==='todo')arr=arr.filter(i=>sOf(i)!=='done');
   if(searchQuery)arr=arr.filter(i=>(i.title+' '+(i.note||'')+' '+(i.tags||'')).toLowerCase().includes(searchQuery));
-  if(curColl!=='all')arr=arr.filter(i=>i.coll===curColl);if(curFr!=='all')arr=all.filter(i=>i.franchise===curFr);arr=arr.filter(smartOk);updFr();arr=sortItems(arr);updColl();
+  if(curColl!=='all')arr=arr.filter(i=>i.coll===curColl);if(curFr!=='all')arr=all.filter(i=>i.franchise===curFr);arr=arr.filter(smartOk).filter(i=>showArch?i.archived:!i.archived);updFr();arr=sortItems(arr);updColl();
   getAllCats().forEach(c=>{const n=all.filter(i=>i.cat===c.id&&sOf(i)!=='done').length,el=$('badge-'+c.id);if(el){el.textContent=n;el.classList.toggle('show',n>0);}});
   const cat=all.filter(i=>i.cat===currentTab),d=cat.filter(i=>sOf(i)==='done').length;
   [['stat-total',cat.length],['stat-done',d],['stat-left',cat.length-d]].forEach(([id,v])=>{const e=$(id);if(e)e.textContent=v;});
-  if(!arr.length){list.innerHTML='<div class="empty" style="grid-column:1/-1"><div class="empty-icon">📂</div><p>Пусто. Нажми <strong>+</strong></p></div>';return;}
+  if(!arr.length){list.innerHTML=`<div class="empty" style="grid-column:1/-1"><div class="empty-icon">${C.icons?.empty?`<img src="${C.icons.empty}" style="width:64px;height:64px;border-radius:14px;object-fit:cover">`:'📂'}</div><p>Здесь пока пусто</p><button class="btn btn-primary" style="margin-top:14px;max-width:200px" onclick="openModal()">+ Добавить</button></div>`;return;}
   const ic=C.icons||{};
-  list.innerHTML=arr.map(i=>{
+  lastTotal=arr.length;arr=arr.slice(0,shown);list.innerHTML=arr.map(i=>{
     const st=sOf(i),rs=Object.entries(i.ratings||{}).filter(([,v])=>v>0).map(([k,v])=>esc(k)+' '+v).join(' · ');
     const prog=(st==='watching'&&EP.includes(i.cat))?`<span>S${i.season||1} · ${i.episode||0}${i.total?'/'+i.total:''}<button class="pp" onclick="bump('${i.id}')">+1</button></span>`:'';
     const tags=(i.tags||'').split(',').map(t=>t.trim()).filter(Boolean).map(t=>`<span class="tg">${esc(t)}</span>`).join('');
@@ -494,4 +494,146 @@ addEventListener('load',()=>{
    <div id="views" class="chips"></div>
    <div class="btn-row"><button class="btn btn-secondary" onclick="resetFlt()">Сбросить</button><button class="btn btn-secondary" onclick="saveView()">💾 Вид</button><button class="btn btn-primary" onclick="applyFlt()">Применить</button></div></div></div>`);
   drawViews();updFr();
+});
+
+/* ===== v7: оформление, вкладки, видео-фон, архив, оптимизация, безопасные сохранения ===== */
+document.head.insertAdjacentHTML('beforeend','<style id="userCss"></style>');
+const UI0={glow:0,glowC:'#7c5cfc',grad:false,gA:'#7c5cfc',gB:'#ec4899',par:false,parS:20,css:'',nav:false,fabL:false,hide:true,cols:2,dens:1,vib:true,video:''};
+const U=()=>{if(!C.ui)C.ui={};for(const k in UI0)if(!(k in C.ui))C.ui[k]=UI0[k];return C.ui;};
+let shown=60,lastTotal=0,sig='',showArch=false,px=0;
+const io=new IntersectionObserver(e=>{if(e[0].isIntersecting){io.disconnect();shown+=60;render();}});
+
+/* --- применение настроек --- */
+function applyUI(){
+  const u=U(),r=document.documentElement.style,b=document.body.classList;
+  r.setProperty('--glow',u.glow+'px');r.setProperty('--glowc',u.glowC);r.setProperty('--ga',u.gA);r.setProperty('--gb',u.gB);r.setProperty('--cols',u.cols);r.setProperty('--dens',u.dens);
+  b.toggle('glow',u.glow>0);b.toggle('gradb',!!u.grad);b.toggle('navb',!!u.nav);b.toggle('fabl',!!u.fabL);
+  $('userCss').textContent=u.css;if(!u.par)$('bgLayer').style.transform='';
+  const h=document.querySelector('header');if(h)r.setProperty('--hh',h.offsetHeight+'px');
+  applyVideo();
+}
+function setU(k,v){U()[k]=v;saveCustom();applyUI();}
+function applyVideo(){
+  const u=U(),bg=$('bgLayer');let v=$('bgVid');
+  if(!u.video){if(v)v.remove();return;}
+  if(!v){v=document.createElement('video');v.id='bgVid';v.muted=v.loop=v.playsInline=true;v.autoplay=true;bg.prepend(v);}
+  if(v.getAttribute('src')!==u.video)v.src=u.video;v.style.opacity=(C.bgOpacity||100)/100;
+  if(matchMedia('(prefers-reduced-motion:reduce)').matches)v.pause();
+}
+document.addEventListener('visibilitychange',()=>{const v=$('bgVid');if(v)document.hidden?v.pause():v.play().catch(()=>{});});
+async function loadVid(inp){const f=inp.files[0];if(!f)return;if(f.size>48e6){toast('Видео больше 48 МБ, лимит хранилища на файл 50 МБ');return;}toast('Загружаю видео…');try{setU('video',await upload(f,'video'));toast('Видео-фон установлен');}catch(e){toast('Не вышло загрузить видео');}}
+function par(x,y){const s=U().parS;$('bgLayer').style.transform=`scale(1.12) translate(${x*s}px,${y*s}px)`;}
+addEventListener('mousemove',e=>{if(U().par)par((e.clientX/innerWidth-.5)*-1,(e.clientY/innerHeight-.5)*-1);});
+addEventListener('deviceorientation',e=>{if(U().par&&e.gamma!=null)par(-Math.max(-1,Math.min(1,e.gamma/30)),-Math.max(-1,Math.min(1,(e.beta-45)/30)));});
+function togPar(v){if(v&&window.DeviceOrientationEvent&&DeviceOrientationEvent.requestPermission)DeviceOrientationEvent.requestPermission().catch(()=>{});setU('par',v);}
+let ly=0;addEventListener('scroll',()=>{const y=scrollY,hid=U().hide&&y>ly&&y>90,h=document.querySelector('header');if(h)h.classList.toggle('hid',hid);document.body.classList.toggle('hh',hid);ly=y;},{passive:true});
+const _ac=applyCustom;applyCustom=function(){_ac();applyUI();};
+const _beep=beep;beep=function(){if(U().vib&&navigator.vibrate)navigator.vibrate(12);_beep();};
+addEventListener('keydown',e=>{
+  if(/INPUT|TEXTAREA|SELECT/.test(e.target.tagName)||e.ctrlKey||e.metaKey||e.altKey)return;const k=e.key.toLowerCase();
+  if(k==='n'){e.preventDefault();openModal();}else if(k==='/'){e.preventDefault();$('searchInput').focus();}else if(k==='r')roulette();else if(k==='s')stats();else if(k==='f')$('flt').classList.add('open');
+  else if(k==='escape')document.querySelectorAll('.overlay.open').forEach(o=>o.classList.remove('open'));
+});
+
+/* --- вкладки (54) и новые категории (78) --- */
+const _gac=getAllCats;
+getAllCats=function(){const t=C.tabs||{};return _gac().map((c,k)=>({...c,name:t[c.id]?.n||c.name,_o:t[c.id]?.o??k,_h:t[c.id]?.h})).filter(c=>!c._h).sort((a,b)=>a._o-b._o);};
+const tabsFull=()=>{const t=C.tabs||{};return _gac().map((c,k)=>({...c,name:t[c.id]?.n||c.name,_o:t[c.id]?.o??k,_h:t[c.id]?.h,_c:t[c.id]?.c})).sort((a,b)=>a._o-b._o);};
+const _rt=renderTabs;
+renderTabs=function(){const v=getAllCats();if(v.length&&!v.some(c=>c.id===currentTab))currentTab=v[0].id;_rt();
+  document.querySelectorAll('.tab').forEach(t=>{const id=t.dataset.cat,c=C.tabs?.[id]?.c||(id.startsWith('cat_')?'var(--accent)':'');
+    if(t.classList.contains('active')&&c){t.style.color=c;t.style.borderTop='2px solid '+c;}else{t.style.color='';t.style.borderTop='';}});};
+function tabSet(id,k,v){C.tabs=C.tabs||{};C.tabs[id]={...(C.tabs[id]||{}),[k]:v};saveCustom();renderTabs();render();drawTabsEd();}
+function tabMove(id,d){const a=tabsFull(),i=a.findIndex(c=>c.id===id),j=i+d;if(j<0||j>=a.length)return;[a[i],a[j]]=[a[j],a[i]];C.tabs=C.tabs||{};a.forEach((c,k)=>C.tabs[c.id]={...(C.tabs[c.id]||{}),o:k});saveCustom();renderTabs();drawTabsEd();}
+function drawTabsEd(){const el=$('tabsEd');if(!el)return;
+  el.innerHTML=tabsFull().map(c=>`<div class="cr"><button class="upload-btn" onclick="tabMove('${c.id}',-1)">▲</button><button class="upload-btn" onclick="tabMove('${c.id}',1)">▼</button><input class="cp-select" style="flex:1" value="${esc(c.name)}" onchange="tabSet('${c.id}','n',this.value)"><input type="color" value="${c._c||'#7c5cfc'}" onchange="tabSet('${c.id}','c',this.value)"><label class="toggle" title="Показывать"><input type="checkbox" ${c._h?'':'checked'} onchange="tabSet('${c.id}','h',!this.checked)"><span class="tslider"></span></label></div>`).join('');}
+function addPreset(k){const m={books:['📚','Книги'],manga:['📖','Манга'],ranobe:['📕','Ранобэ']}[k];if((C.customCats||[]).some(c=>c.kind===k)){toast('Уже есть');return;}
+  C.customCats.push({id:'cat_'+Date.now(),name:m[1],icon:m[0],kind:k});saveCustom();renderTabs();renderCustomCatList();render();drawTabsEd();toast('Добавлена категория «'+m[1]+'»');}
+SRC.ol=async q=>{try{return((await J('https://openlibrary.org/search.json?limit=4&q='+encodeURIComponent(q))).docs||[]).filter(d=>d.cover_i).map(d=>({title:d.title,poster:`https://covers.openlibrary.org/b/id/${d.cover_i}-M.jpg`,year:d.first_publish_year||'',genres:(d.author_name||[]).slice(0,2).join(', ')}));}catch(e){return[];}};
+SRC.shikiM=async(q,k)=>{try{return(await J(`https://shikimori.one/api/${k==='ranobe'?'ranobe':'mangas'}?limit=4&search=${encodeURIComponent(q)}`)).map(x=>({title:x.russian||x.name,poster:x.image?.original?'https://shikimori.one'+x.image.original:'',year:(x.aired_on||'').slice(0,4),score:+x.score||''}));}catch(e){return[];}};
+const _cands=cands;cands=async function(q,cat){const k=(C.customCats||[]).find(c=>c.id===cat)?.kind;if(k==='books')return(await SRC.ol(q)).filter(x=>x.poster);if(k==='manga'||k==='ranobe')return(await SRC.shikiM(q,k)).filter(x=>x.poster);return _cands(q,cat);};
+ICON_LABELS.empty='Картинка пустого списка';
+
+/* --- безопасные сохранения (99, частично) --- */
+const SNAP={},_up=upsertItem;
+upsertItem=async function(item){
+  const old=SNAP[item.id]?JSON.parse(SNAP[item.id]):null;
+  if(!old)await _up(item);
+  else{const d={};for(const k in item)if(JSON.stringify(item[k])!==JSON.stringify(old[k]))d[k]=item[k];if(!Object.keys(d).length)return;
+    await sbFetch('/items?id=eq.'+encodeURIComponent(item.id),{method:'PATCH',body:JSON.stringify(d)});}
+  SNAP[item.id]=JSON.stringify(item);
+};
+const _load2=loadAllItems;loadAllItems=async function(){await _load2();Object.values(items).forEach(i=>SNAP[i.id]=JSON.stringify(i));};
+function mergeShared(k,cur,mine){
+  if(k==='wants'){const r={...(cur||{})};if(mine[ME])r[ME]=1;else delete r[ME];return r;}
+  if(k==='reacts'){const r={};cur=cur||{};new Set([...Object.keys(cur),...Object.keys(mine)]).forEach(e=>{const s=new Set(cur[e]||[]);(mine[e]||[]).includes(ME)?s.add(ME):s.delete(ME);r[e]=[...s];});return r;}
+  const key=c=>c.by+c.ts+c.text,have=new Set((cur||[]).map(key));return[...(cur||[]),...mine.filter(c=>!have.has(key(c)))];
+}
+async function patch(id,o){
+  const old=items[id];if(!old)return;items[id]={...old,...o};render();if(infoId===id&&$('info').classList.contains('open'))drawInfo();
+  try{for(const k of ['wants','reacts','comments'])if(k in o){const r=await sbFetch(`/items?id=eq.${encodeURIComponent(id)}&select=${k}`);items[id][k]=mergeShared(k,r?.[0]?.[k],o[k]);}
+    await upsertItem(items[id]);render();}catch(e){setSyncState('error','ошибка');}
+}
+
+/* --- оптимизация (101), автообновление (88), лимиты (102) --- */
+const _r2=render;render=function(){
+  const sg=[currentTab,currentFilter,curStatus,searchQuery,curColl,curFr,currentSort,JSON.stringify(SF),showArch].join('|');if(sg!==sig){sig=sg;shown=60;}
+  lastTotal=0;_r2();
+  if(lastTotal>shown){$('list').insertAdjacentHTML('beforeend',`<div id="more" class="stb" style="grid-column:1/-1;text-align:center;padding:12px;cursor:pointer" onclick="shown+=60;render()">Показать ещё (${lastTotal-shown})</div>`);io.observe($('more'));}
+};
+async function autoRefresh(){
+  const week=6048e5,todo=Object.values(items).filter(i=>sOf(i)!=='done'&&(!i.info||!i.info.upd||Date.now()-i.info.upd>week)).slice(0,6);
+  for(const i of todo){const f=await lookup(i),cur=items[i.id];if(!cur)continue;const nz=Object.fromEntries(Object.entries(f).filter(([,v])=>v));
+    items[i.id]={...cur,info:{...cur.info,...nz,ts:1,upd:Date.now()},poster:cur.poster||f.poster||'',total:cur.total||f.eps||0};
+    try{await upsertItem(items[i.id]);}catch(e){}await new Promise(r=>setTimeout(r,1500));}
+  render();
+}
+async function usage(silent){
+  const el=$('usage');if(!silent)el.textContent='Считаю…';let bytes=0,n=0;
+  try{for(const p of ['bg','poster','video']){const r=await fetch(`${SUPA_URL}/storage/v1/object/list/media`,{method:'POST',headers:{apikey:SUPA_KEY,Authorization:`Bearer ${SUPA_KEY}`,'Content-Type':'application/json'},body:JSON.stringify({prefix:p,limit:1000})});(await r.json()).forEach(o=>{bytes+=o.metadata?.size||0;n++;});}
+    const warn=bytes>8e8;if(silent&&!warn)return;if(warn)toast('Хранилище почти заполнено');
+    el.innerHTML=`Файлы: <b>${(bytes/1048576).toFixed(1)} МБ</b> (${n} шт.), карточек: <b>${Object.keys(items).length}</b>.${warn?' ⚠️ почти заполнено.':''} Точные лимиты: Supabase → Project → Usage.`;}
+  catch(e){if(!silent)el.textContent='Не удалось получить данные';}
+}
+const _init3=initApp;initApp=async function(){await _init3();setTimeout(autoRefresh,6000);setTimeout(()=>usage(true),9000);};
+
+/* --- панель «Ещё» и архив (97) --- */
+const _draw3=drawInfo;drawInfo=function(){_draw3();const i=items[infoId];if(i)$('infoBody').insertAdjacentHTML('beforeend',`<div style="margin-top:12px"><button class="upload-btn" onclick="patch(infoId,{archived:!items[infoId].archived})">📦 ${i.archived?'Вернуть из архива':'В архив'}</button></div>`);};
+const rw=(l,x)=>`<div class="rr"><span class="cl">${l}</span>${x}</div>`;
+const rg=(k,a,b,st=1)=>`<input type="range" min="${a}" max="${b}" step="${st}" value="${U()[k]}" oninput="setU('${k}',+this.value)">`;
+const tg=(k,f)=>`<label class="toggle"><input type="checkbox" ${U()[k]?'checked':''} onchange="${f||`setU('${k}',this.checked)`}"><span class="tslider"></span></label>`;
+const cl=k=>`<input type="color" value="${U()[k]}" oninput="setU('${k}',this.value)">`;
+function drawMore(){
+  $('moreBody').innerHTML=`<div class="cs"><div class="cs-title">Карточки</div>
+   ${rw('Свечение',rg('glow',0,40))}${rw('Цвет свечения',cl('glowC'))}${rw('Градиентная рамка',tg('grad')+cl('gA')+cl('gB'))}
+   ${rw('Колонок',`<select class="cp-select" onchange="setU('cols',+this.value)">${[1,2,3,4].map(n=>`<option ${U().cols==n?'selected':''}>${n}</option>`).join('')}</select>`)}${rw('Плотность',rg('dens',.6,1.6,.1))}</div><div class="sep"></div>
+   <div class="cs"><div class="cs-title">Фон</div>${rw('Параллакс',tg('par','togPar(this.checked)'))}${rw('Сила',rg('parS',5,50))}
+   <div class="cr"><button class="upload-btn" onclick="$('vidFile').click()">🎬 Видео-фон (mp4/webm)</button><button class="reset-sm" onclick="setU('video','')">Убрать</button><input type="file" id="vidFile" accept="video/mp4,video/webm" onchange="loadVid(this)"></div></div><div class="sep"></div>
+   <div class="cs"><div class="cs-title">Интерфейс</div>${rw('Меню внизу (телефон)',tg('nav'))}${rw('Кнопка «+» слева',tg('fabL'))}${rw('Прятать шапку при прокрутке',tg('hide'))}${rw('Вибрация',tg('vib'))}
+   <div style="font-size:11px;color:var(--text3)">Клавиши: N добавить, / поиск, R рулетка, S статистика, F фильтры, Esc закрыть. Картинку для пустого списка задай во вкладке «Иконки».</div></div><div class="sep"></div>
+   <div class="cs"><div class="cs-title">Вкладки</div><div id="tabsEd"></div><div class="cr" style="flex-wrap:wrap"><button class="upload-btn" onclick="addPreset('books')">+ Книги</button><button class="upload-btn" onclick="addPreset('manga')">+ Манга</button><button class="upload-btn" onclick="addPreset('ranobe')">+ Ранобэ</button></div></div><div class="sep"></div>
+   <div class="cs"><div class="cs-title">Свой CSS</div><textarea class="cp-select" style="height:110px;font-family:monospace;font-size:12px" placeholder=".item{border-radius:20px}" oninput="setU('css',this.value)">${esc(U().css)}</textarea></div><div class="sep"></div>
+   <div class="cs"><div class="cs-title">Хранилище</div><div id="usage" style="font-size:12px;color:var(--text2)">—</div><button class="upload-btn" onclick="usage()">Проверить</button></div>`;
+  drawTabsEd();
+}
+const _tc=toggleCustom;toggleCustom=function(){drawMore();_tc();};
+addEventListener('load',()=>{
+  const css=document.createElement('style');
+  css.textContent=`body.glow .item{box-shadow:0 0 var(--glow) var(--glowc),var(--card-shadow)}
+  body.gradb .item{border:2px solid transparent;background:linear-gradient(var(--card-bg),var(--card-bg)) padding-box,linear-gradient(135deg,var(--ga),var(--gb)) border-box}
+  #list{grid-template-columns:repeat(var(--cols,2),1fr)!important}.item{padding:calc(13px*var(--dens,1)) 14px}
+  header{transition:transform .25s}header.hid{transform:translateY(-110%)}
+  .toolbar{position:sticky;top:var(--hh,0);z-index:4;background:var(--bg2);padding:8px 0;margin-top:0;transition:top .25s}body.hh .toolbar{top:0}
+  body.navb .tabs{position:fixed;bottom:0;left:0;right:0;z-index:20;max-width:860px;margin:0 auto}body.navb .content{padding-bottom:150px}body.navb .fab{bottom:78px}
+  body.fabl .fab{right:auto;left:24px}
+  .sk{height:76px;border-radius:12px;background:linear-gradient(90deg,rgba(255,255,255,.04),rgba(255,255,255,.12),rgba(255,255,255,.04));background-size:200% 100%;animation:sh 1.2s infinite}@keyframes sh{to{background-position:-200% 0}}
+  #bgVid{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}`;
+  document.head.appendChild(css);
+  $('cats0')||document.querySelector('.cp-tabs').insertAdjacentHTML('beforeend','<div class="cp-tab" data-tab="more" onclick="switchCpTab(\'more\')">🛠 Ещё</div>');
+  document.querySelector('.cp-body').insertAdjacentHTML('beforeend','<div class="cp-page" data-page="more" id="moreBody"></div>');
+  document.querySelector('.toolbar').insertAdjacentHTML('beforeend','<button class="filter-btn" onclick="showArch=!showArch;this.style.outline=showArch?\'2px solid var(--accent)\':\'\';render()">📦</button>');
+  renderIconPreviews();
+  const c=localStorage.getItem('wl_cache');
+  if(c&&isAuthed()){try{items=JSON.parse(c);render();}catch(e){}}else $('list').innerHTML=Array(6).fill('<div class="sk"></div>').join('');
+  applyUI();
 });
