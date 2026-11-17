@@ -23,7 +23,7 @@ function render(){
   else if(currentFilter==='done')arr=arr.filter(i=>sOf(i)==='done');
   else if(currentFilter==='todo')arr=arr.filter(i=>sOf(i)!=='done');
   if(searchQuery)arr=arr.filter(i=>(i.title+' '+(i.note||'')+' '+(i.tags||'')).toLowerCase().includes(searchQuery));
-  if(curColl!=='all')arr=arr.filter(i=>i.coll===curColl);arr=sortItems(arr);updColl();
+  if(curColl!=='all')arr=arr.filter(i=>i.coll===curColl);if(curFr!=='all')arr=all.filter(i=>i.franchise===curFr);arr=arr.filter(smartOk);updFr();arr=sortItems(arr);updColl();
   getAllCats().forEach(c=>{const n=all.filter(i=>i.cat===c.id&&sOf(i)!=='done').length,el=$('badge-'+c.id);if(el){el.textContent=n;el.classList.toggle('show',n>0);}});
   const cat=all.filter(i=>i.cat===currentTab),d=cat.filter(i=>sOf(i)==='done').length;
   [['stat-total',cat.length],['stat-done',d],['stat-left',cat.length-d]].forEach(([id,v])=>{const e=$(id);if(e)e.textContent=v;});
@@ -38,7 +38,7 @@ function render(){
       <div class="check" onclick="toggleDone('${i.id}')">${st==='done'?(ic.check?`<img src="${ic.check}">`:'✓'):''}</div>
       <div class="item-body"><div class="item-title" style="cursor:pointer" onclick="openInfo('${i.id}')">${esc(i.title)}</div>
         ${i.note?`<div class="item-meta">${esc(i.note)}</div>`:''}
-        <div class="chips"><span class="stb" onclick="cycleStatus('${i.id}')">${ST[st]}</span><span class="stb" onclick="toggleWant('${i.id}')">${w.length?'💗 '+w.map(esc).join(', '):'🤍 хочу'}</span>${i.coll?'<span class="tg">📁 '+esc(i.coll)+'</span>':''}${prog}${rs?`<span class="rt">⭐ ${rs}</span>`:''}${i.added_by?`<span>+${esc(i.added_by)}</span>`:''}</div>
+        <div class="chips"><span class="stb" onclick="cycleStatus('${i.id}')">${ST[st]}</span><span class="stb" onclick="toggleWant('${i.id}')">${w.length?'💗 '+w.map(esc).join(', '):'🤍 хочу'}</span>${i.coll?'<span class="tg">📁 '+esc(i.coll)+'</span>':''}${i.franchise?`<span class="tg" style="cursor:pointer" data-f="${esc(i.franchise)}" onclick="setFr(this.dataset.f)">🔗 ${esc(i.franchise)} ${frProg(i.franchise)}</span>`:''}${i.fear?`<span>${'💀'.repeat(i.fear)}</span>`:''}${i.scary?'<span>😱 скримеры</span>':''}${prog}${rs?`<span class="rt">⭐ ${rs}</span>`:''}${i.added_by?`<span>+${esc(i.added_by)}</span>`:''}</div>
         ${tags?`<div class="chips">${tags}</div>`:''}
         ${i.link?`<a href="${esc(i.link)}" target="_blank" style="font-size:11px;color:var(--accent2);text-decoration:none">🔗 Открыть</a>`:''}
       </div>
@@ -58,7 +58,7 @@ function fillForm(i){
   v('inputTitle',i.title);v('inputNote',i.note);v('inputLink',i.link);
   rebuildCatSelect();$('inputCat').value=i.cat||currentTab;
   v('fStatus',sOf(i));v('fSeason',i.season||'');v('fEpisode',i.episode||'');v('fTotal',i.total||'');
-  v('fRating',(i.ratings||{})[ME]||'');v('fTags',i.tags);v('fPoster',i.poster);v('fColl',i.coll);
+  v('fRating',(i.ratings||{})[ME]||'');v('fTags',i.tags);v('fPoster',i.poster);v('fColl',i.coll);_pick=null;$('sug').innerHTML='';v('fFr',i.franchise);
   $('overlay').classList.add('open');setTimeout(()=>$('inputTitle').focus(),80);
 }
 function openModal(){editingId=null;fillForm({});}
@@ -72,7 +72,7 @@ async function saveItem(){
   if(!poster)poster=await findPoster(title,cat);
   const base=old||{id:Date.now().toString(36)+Math.random().toString(36).slice(2,6),ts:Date.now(),added_by:ME};
   const item={...base,cat,title,note:$('inputNote').value.trim(),link:$('inputLink').value.trim(),status:st,done:st==='done',
-    season:+$('fSeason').value||0,episode:+$('fEpisode').value||0,total:+$('fTotal').value||0,ratings,tags:$('fTags').value.trim(),poster,coll:$('fColl').value.trim()};
+    season:+$('fSeason').value||0,episode:+$('fEpisode').value||0,total:+$('fTotal').value||0,ratings,tags:$('fTags').value.trim(),poster,coll:$('fColl').value.trim(),franchise:$('fFr').value.trim(),...(_pick&&!old?{info:{ts:1,year:_pick.year||'',genres:_pick.genres||'',desc:_pick.desc||'',score:_pick.score||'',trailer:_pick.trailer||''}}:{})};
   items[item.id]=item;render();closeModal();
   try{await upsertItem(item);setSyncState('live','сохранено');}catch(e){setSyncState('error','ошибка сохранения');}
   btn.disabled=false;btn.textContent='Сохранить';
@@ -370,19 +370,19 @@ const SRC={
   async shiki(q){
     for(const h of ['shikimori.one','shikimori.me','shikimori.io']){
       try{const a=await J(`https://${h}/api/animes?limit=4&search=${encodeURIComponent(q)}`);
-        const r=a.map(x=>({poster:x.image?.original?`https://${h}${x.image.original}`:'',year:(x.aired_on||'').slice(0,4),score:+x.score||'',eps:x.episodes||0}));
+        const r=a.map(x=>({title:x.russian||x.name,poster:x.image?.original?`https://${h}${x.image.original}`:'',year:(x.aired_on||'').slice(0,4),score:+x.score||'',eps:x.episodes||0}));
         if(a[0]){try{const d=await J(`https://${h}/api/animes/${a[0].id}`);r[0].genres=(d.genres||[]).map(g=>g.russian||g.name).join(', ');r[0].desc=(d.description||'').replace(/\[[^\]]*\]/g,'').slice(0,600);}catch(e){}}
         return r;}catch(e){}
     }return[];
   },
-  async jikan(q){try{return((await J('https://api.jikan.moe/v4/anime?limit=4&q='+encodeURIComponent(q))).data||[]).map(x=>({poster:x.images?.jpg?.image_url||'',year:x.year||'',genres:(x.genres||[]).map(g=>g.name).join(', '),desc:x.synopsis||'',score:x.score||'',eps:x.episodes||0,trailer:x.trailer?.embed_url||''}));}catch(e){return[];}},
+  async jikan(q){try{return((await J('https://api.jikan.moe/v4/anime?limit=4&q='+encodeURIComponent(q))).data||[]).map(x=>({title:x.title_english||x.title,poster:x.images?.jpg?.image_url||'',year:x.year||'',genres:(x.genres||[]).map(g=>g.name).join(', '),desc:x.synopsis||'',score:x.score||'',eps:x.episodes||0,trailer:x.trailer?.embed_url||''}));}catch(e){return[];}},
   async itunes(q,cat){try{const m=cat==='series'?'tvShow':'movie',e=cat==='series'?'tvSeason':'movie';
-    return((await J(`https://itunes.apple.com/search?term=${encodeURIComponent(q)}&media=${m}&entity=${e}&country=ru&limit=4`)).results||[]).map(x=>({poster:(x.artworkUrl100||'').replace('100x100bb','400x600bb'),year:(x.releaseDate||'').slice(0,4),genres:x.primaryGenreName||'',desc:x.longDescription||x.shortDescription||''}));}catch(e){return[];}},
+    return((await J(`https://itunes.apple.com/search?term=${encodeURIComponent(q)}&media=${m}&entity=${e}&country=ru&limit=4`)).results||[]).map(x=>({title:x.trackName||x.collectionName,poster:(x.artworkUrl100||'').replace('100x100bb','400x600bb'),year:(x.releaseDate||'').slice(0,4),genres:x.primaryGenreName||'',desc:x.longDescription||x.shortDescription||''}));}catch(e){return[];}},
   async wiki(q,cat){
     const w={anime:'аниме',films:'фильм',series:'сериал',games:'игра'}[cat]||'';
     for(const l of ['ru','en']){
       try{const d=await J(`https://${l}.wikipedia.org/w/api.php?action=query&generator=search&gsrlimit=4&gsrsearch=${encodeURIComponent(q+' '+(l==='ru'?w:''))}&prop=pageimages|extracts&piprop=thumbnail&pithumbsize=300&exintro=1&explaintext=1&exsentences=3&format=json&origin=*`);
-        const r=Object.values(d.query?.pages||{}).sort((a,b)=>a.index-b.index).map(p=>({poster:p.thumbnail?.source||'',desc:p.extract||''})).filter(x=>x.poster);
+        const r=Object.values(d.query?.pages||{}).sort((a,b)=>a.index-b.index).map(p=>({title:p.title,poster:p.thumbnail?.source||'',desc:p.extract||''})).filter(x=>x.poster);
         if(r.length)return r;}catch(e){}
     }return[];
   }
@@ -410,3 +410,88 @@ async function pickPoster(){
   const c=await cands(($('pq').value.trim())||i.title,i.cat);
   g.innerHTML=c.map(x=>`<img src="${esc(x.poster)}" style="height:110px" onclick="patch('${i.id}',{poster:'${x.poster}'})">`).join('')||'Не нашлось. Попробуй другое название или вставь ссылку в форме.';
 }
+
+/* ===== v6: умное добавление, добавление по ссылке, сетка серий, франшизы, хоррор-метр, умные фильтры ===== */
+let _pick=null,sugT,curFr='all',SF={};
+function frProg(f){const a=Object.values(items).filter(i=>i.franchise===f);return a.filter(i=>sOf(i)==='done').length+'/'+a.length;}
+function setFr(f){curFr=f;render();}
+function updFr(){const s=$('frSel');if(!s)return;const fs=[...new Set(Object.values(items).map(i=>i.franchise).filter(Boolean))];
+  const h='<option value="all">Все франшизы</option>'+fs.map(c=>`<option>${esc(c)}</option>`).join('');
+  if(s.dataset.h!==h){s.innerHTML=h;s.dataset.h=h;$('frList').innerHTML=fs.map(c=>`<option value="${esc(c)}">`).join('');}
+  if(!fs.includes(curFr))curFr='all';s.value=curFr;s.style.display=fs.length?'':'none';}
+
+/* 18: добавление по ссылке */
+async function fromLink(u){
+  try{let m;
+    if(m=u.match(/shikimori\.[a-z]+\/animes\/[a-z]?(\d+)/)){const d=await J(`https://shikimori.one/api/animes/${m[1]}`);return{title:d.russian||d.name,poster:d.image?.original?'https://shikimori.one'+d.image.original:'',year:(d.aired_on||'').slice(0,4),genres:(d.genres||[]).map(g=>g.russian||g.name).join(', '),desc:(d.description||'').replace(/\[[^\]]*\]/g,'').slice(0,600),score:+d.score||'',eps:d.episodes||0,cat:'anime',url:u};}
+    if(m=u.match(/myanimelist\.net\/anime\/(\d+)/)){const x=(await J(`https://api.jikan.moe/v4/anime/${m[1]}`)).data;return{title:x.title_english||x.title,poster:x.images?.jpg?.image_url||'',year:x.year||'',genres:(x.genres||[]).map(g=>g.name).join(', '),desc:x.synopsis||'',score:x.score||'',eps:x.episodes||0,trailer:x.trailer?.embed_url||'',cat:'anime',url:u};}
+    if(m=u.match(/(\w+)\.wikipedia\.org\/wiki\/([^#?]+)/)){const d=await J(`https://${m[1]}.wikipedia.org/w/api.php?action=query&titles=${m[2]}&prop=pageimages|extracts&piprop=thumbnail&pithumbsize=300&exintro=1&explaintext=1&exsentences=3&format=json&origin=*`),p=Object.values(d.query.pages)[0];return{title:p.title,poster:p.thumbnail?.source||'',desc:p.extract||'',url:u};}
+    if(m=u.match(/apple\.com\/.*?\/id(\d+)/)){const x=(await J(`https://itunes.apple.com/lookup?id=${m[1]}&country=ru`)).results?.[0];if(x)return{title:x.trackName||x.collectionName,poster:(x.artworkUrl100||'').replace('100x100bb','400x600bb'),year:(x.releaseDate||'').slice(0,4),genres:x.primaryGenreName||'',desc:x.longDescription||'',cat:x.kind==='feature-movie'?'films':'series',url:u};}
+    if(m=u.match(/letterboxd\.com\/film\/([^/]+)/)){const c=await cands(m[1].replace(/-/g,' '),'films');return c[0]?{...c[0],cat:'films',url:u}:null;}
+  }catch(e){}
+  return null;
+}
+/* 9: умное добавление */
+function onTitle(){
+  clearTimeout(sugT);_pick=null;const v=$('inputTitle').value.trim(),box=$('sug');
+  if(editingId||v.length<2){box.innerHTML='';return;}
+  sugT=setTimeout(async()=>{
+    box.textContent='Ищу…';
+    const c=/^https?:\/\//.test(v)?[await fromLink(v)].filter(Boolean):await cands(v,$('inputCat').value||currentTab);
+    if(!c.length){box.textContent=/^https?:/.test(v)?'Для этой ссылки нет открытого API. Введи название':'Ничего не нашлось';return;}
+    window._cs=c;box.innerHTML=c.slice(0,6).map((x,k)=>`<div class="pick2" onclick="takePick(${k})"><img src="${esc(x.poster)}"><span>${esc(x.title||'')}${x.year?' · '+x.year:''}</span></div>`).join('');
+  },450);
+}
+function takePick(k){
+  const x=window._cs[k];_pick=x;$('inputTitle').value=x.title||$('inputTitle').value;$('fPoster').value=x.poster||'';
+  if(!$('fTotal').value&&x.eps)$('fTotal').value=x.eps;if(x.cat)$('inputCat').value=x.cat;if(x.url&&!$('inputLink').value)$('inputLink').value=x.url;
+  $('sug').innerHTML='';
+}
+/* 10: сетка серий */
+function bump(id){const i=items[id],S=i.season||1,seen={...(i.seen||{})},a=new Set(seen[S]||[]),n=(i.episode||0)+1;a.add(n);seen[S]=[...a].sort((x,y)=>x-y);patch(id,{episode:n,seen});beep();}
+function togEp(n){
+  const i=items[infoId],S=i.season||1,seen={...(i.seen||{})},a=new Set(seen[S]||[]);a.has(n)?a.delete(n):a.add(n);seen[S]=[...a].sort((x,y)=>x-y);
+  const o={seen,episode:seen[S].length?Math.max(...seen[S]):0};if(a.size&&sOf(i)==='want')o.status='watching';
+  if(i.total&&a.size>=i.total)toast('Сезон '+S+' досмотрен 🎉');patch(infoId,o);beep();
+}
+function setSeason(d){const i=items[infoId],S=Math.max(1,(i.season||1)+d);patch(infoId,{season:S,episode:Math.max(0,...((i.seen||{})[S]||[0]))});}
+function setFear(n){patch(infoId,{fear:n});}
+const _draw2=drawInfo;drawInfo=function(){
+  _draw2();const i=items[infoId];if(!i)return;
+  const S=i.season||1,seen=new Set((i.seen||{})[S]||[]),T=Math.min(+i.total||0,300);let h='';
+  if(EP.includes(i.cat))h+=`<div class="cs-title" style="margin-top:12px">Сезон <button class="upload-btn" onclick="setSeason(-1)">◀</button> ${S} <button class="upload-btn" onclick="setSeason(1)">▶</button> · просмотрено ${seen.size}${T?'/'+T+', осталось '+Math.max(0,T-seen.size):''}</div>`+(T?`<div class="eg">${Array.from({length:T},(_,k)=>`<b class="${seen.has(k+1)?'on':''}" onclick="togEp(${k+1})">${k+1}</b>`).join('')}</div>`:'<small style="color:var(--text3)">Укажи «Всего серий» в форме редактирования</small>');
+  h+=`<div class="cs-title" style="margin-top:12px">Насколько страшно</div><div class="chips">${[1,2,3,4,5].map(n=>`<span class="stb" style="${(i.fear||0)>=n?'background:var(--accent-glow)':''}" onclick="setFear(${n})">💀</span>`).join('')}<span class="stb" onclick="setFear(0)">сброс</span><label style="font-size:12px"><input type="checkbox" ${i.scary?'checked':''} onchange="patch(infoId,{scary:this.checked})"> скримеры</label></div>`;
+  $('infoBody').firstElementChild.insertAdjacentHTML('afterend',h);
+};
+/* 19: умные фильтры */
+const avgR=i=>{const r=Object.values(i.ratings||{}).filter(v=>v>0);return r.length?r.reduce((a,b)=>a+b,0)/r.length:(+i.info?.score||0);};
+function smartOk(i){
+  const f=SF,y=+i.info?.year||0;
+  if(f.r&&avgR(i)<f.r)return false;if(f.y1&&(!y||y<f.y1))return false;if(f.y2&&(!y||y>f.y2))return false;
+  if(f.g&&!(i.info?.genres||'').toLowerCase().includes(f.g))return false;if(f.t&&!(i.tags||'').toLowerCase().includes(f.t))return false;
+  if(f.f&&(i.fear||0)<f.f)return false;if(f.s==='1'&&!i.scary)return false;if(f.s==='0'&&i.scary)return false;return true;
+}
+function readFlt(){SF={r:+$('sfR').value||0,y1:+$('sfY1').value||0,y2:+$('sfY2').value||0,g:$('sfG').value.trim().toLowerCase(),t:$('sfT').value.trim().toLowerCase(),f:+$('sfF').value||0,s:$('sfS').value};}
+function writeFlt(){$('sfR').value=SF.r||'';$('sfY1').value=SF.y1||'';$('sfY2').value=SF.y2||'';$('sfG').value=SF.g||'';$('sfT').value=SF.t||'';$('sfF').value=SF.f||'';$('sfS').value=SF.s||'';}
+function applyFlt(){readFlt();$('flt').classList.remove('open');render();$('fltBtn').style.outline=Object.values(SF).some(Boolean)?'2px solid var(--accent)':'';}
+function resetFlt(){SF={};writeFlt();applyFlt();}
+function saveView(){readFlt();const n=(prompt('Название вида?')||'').trim();if(!n)return;const v=JSON.parse(localStorage.getItem('wl_views')||'{}');v[n]=SF;localStorage.setItem('wl_views',JSON.stringify(v));drawViews();}
+function useView(n){SF=JSON.parse(localStorage.getItem('wl_views')||'{}')[n]||{};writeFlt();applyFlt();}
+function drawViews(){$('views').innerHTML=Object.keys(JSON.parse(localStorage.getItem('wl_views')||'{}')).map(n=>`<span class="stb" data-n="${esc(n)}" onclick="useView(this.dataset.n)">${esc(n)}</span>`).join('');}
+addEventListener('load',()=>{
+  const css=document.createElement('style');
+  css.textContent=`.eg{display:flex;flex-wrap:wrap;gap:4px;margin:8px 0}.eg b{width:30px;height:28px;display:grid;place-items:center;font-size:11px;border-radius:6px;background:rgba(255,255,255,.07);cursor:pointer}.eg b.on{background:var(--accent);color:#fff}
+  .sug{display:flex;gap:8px;overflow-x:auto;margin:-6px 0 12px;font-size:11px;color:var(--text2)}.pick2{flex:none;width:76px;text-align:center;cursor:pointer}.pick2 img{width:76px;height:108px;object-fit:cover;border-radius:8px}`;
+  document.head.appendChild(css);
+  $('inputTitle').insertAdjacentHTML('afterend','<div id="sug" class="sug"></div>');
+  $('inputTitle').addEventListener('input',onTitle);
+  $('fColl').closest('.field').insertAdjacentHTML('afterend','<div class="field"><label>Франшиза (общая для частей)</label><input id="fFr" list="frList" placeholder="Silent Hill"><datalist id="frList"></datalist></div>');
+  document.querySelector('.toolbar').insertAdjacentHTML('beforeend','<select id="frSel" class="sort-select" onchange="curFr=this.value;render()" style="display:none"></select><button id="fltBtn" class="filter-btn" onclick="$(\'flt\').classList.add(\'open\')">🔎</button>');
+  document.body.insertAdjacentHTML('beforeend',`<div id="flt" class="overlay" onclick="if(event.target===this)this.classList.remove('open')"><div class="modal"><div class="modal-title">🔎 Умные фильтры</div>
+   <div class="field row3"><div><label>Оценка от</label><input id="sfR" type="number" min="0" max="10" step=".5"></div><div><label>Год от</label><input id="sfY1" type="number"></div><div><label>Год до</label><input id="sfY2" type="number"></div></div>
+   <div class="field row3"><div><label>Жанр</label><input id="sfG"></div><div><label>Тег</label><input id="sfT"></div><div><label>Страх от (0–5)</label><input id="sfF" type="number" min="0" max="5"></div></div>
+   <div class="field"><label>Скримеры</label><select id="sfS"><option value="">неважно</option><option value="1">есть</option><option value="0">нет</option></select></div>
+   <div id="views" class="chips"></div>
+   <div class="btn-row"><button class="btn btn-secondary" onclick="resetFlt()">Сбросить</button><button class="btn btn-secondary" onclick="saveView()">💾 Вид</button><button class="btn btn-primary" onclick="applyFlt()">Применить</button></div></div></div>`);
+  drawViews();updFr();
+});
