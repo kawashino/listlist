@@ -23,7 +23,7 @@ function render(){
   else if(currentFilter==='done')arr=arr.filter(i=>sOf(i)==='done');
   else if(currentFilter==='todo')arr=arr.filter(i=>sOf(i)!=='done');
   if(searchQuery)arr=arr.filter(i=>(i.title+' '+(i.note||'')+' '+(i.tags||'')).toLowerCase().includes(searchQuery));
-  arr=sortItems(arr);
+  if(curColl!=='all')arr=arr.filter(i=>i.coll===curColl);arr=sortItems(arr);updColl();
   getAllCats().forEach(c=>{const n=all.filter(i=>i.cat===c.id&&sOf(i)!=='done').length,el=$('badge-'+c.id);if(el){el.textContent=n;el.classList.toggle('show',n>0);}});
   const cat=all.filter(i=>i.cat===currentTab),d=cat.filter(i=>sOf(i)==='done').length;
   [['stat-total',cat.length],['stat-done',d],['stat-left',cat.length-d]].forEach(([id,v])=>{const e=$(id);if(e)e.textContent=v;});
@@ -33,12 +33,12 @@ function render(){
     const st=sOf(i),rs=Object.entries(i.ratings||{}).filter(([,v])=>v>0).map(([k,v])=>esc(k)+' '+v).join(' · ');
     const prog=(st==='watching'&&EP.includes(i.cat))?`<span>S${i.season||1} · ${i.episode||0}${i.total?'/'+i.total:''}<button class="pp" onclick="bump('${i.id}')">+1</button></span>`:'';
     const tags=(i.tags||'').split(',').map(t=>t.trim()).filter(Boolean).map(t=>`<span class="tg">${esc(t)}</span>`).join('');
-    return `<div class="item st-${st}">
+    const w=Object.keys(i.wants||{});return `<div class="item st-${st}${w.length>1?' both':''}">
       ${i.poster?`<img class="poster" loading="lazy" src="${esc(i.poster)}" onerror="this.remove()">`:''}
       <div class="check" onclick="toggleDone('${i.id}')">${st==='done'?(ic.check?`<img src="${ic.check}">`:'✓'):''}</div>
-      <div class="item-body"><div class="item-title">${esc(i.title)}</div>
+      <div class="item-body"><div class="item-title" style="cursor:pointer" onclick="openInfo('${i.id}')">${esc(i.title)}</div>
         ${i.note?`<div class="item-meta">${esc(i.note)}</div>`:''}
-        <div class="chips"><span class="stb" onclick="cycleStatus('${i.id}')">${ST[st]}</span>${prog}${rs?`<span class="rt">⭐ ${rs}</span>`:''}${i.added_by?`<span>+${esc(i.added_by)}</span>`:''}</div>
+        <div class="chips"><span class="stb" onclick="cycleStatus('${i.id}')">${ST[st]}</span><span class="stb" onclick="toggleWant('${i.id}')">${w.length?'💗 '+w.map(esc).join(', '):'🤍 хочу'}</span>${i.coll?'<span class="tg">📁 '+esc(i.coll)+'</span>':''}${prog}${rs?`<span class="rt">⭐ ${rs}</span>`:''}${i.added_by?`<span>+${esc(i.added_by)}</span>`:''}</div>
         ${tags?`<div class="chips">${tags}</div>`:''}
         ${i.link?`<a href="${esc(i.link)}" target="_blank" style="font-size:11px;color:var(--accent2);text-decoration:none">🔗 Открыть</a>`:''}
       </div>
@@ -58,7 +58,7 @@ function fillForm(i){
   v('inputTitle',i.title);v('inputNote',i.note);v('inputLink',i.link);
   rebuildCatSelect();$('inputCat').value=i.cat||currentTab;
   v('fStatus',sOf(i));v('fSeason',i.season||'');v('fEpisode',i.episode||'');v('fTotal',i.total||'');
-  v('fRating',(i.ratings||{})[ME]||'');v('fTags',i.tags);v('fPoster',i.poster);
+  v('fRating',(i.ratings||{})[ME]||'');v('fTags',i.tags);v('fPoster',i.poster);v('fColl',i.coll);
   $('overlay').classList.add('open');setTimeout(()=>$('inputTitle').focus(),80);
 }
 function openModal(){editingId=null;fillForm({});}
@@ -72,7 +72,7 @@ async function saveItem(){
   if(!poster)poster=await findPoster(title,cat);
   const base=old||{id:Date.now().toString(36)+Math.random().toString(36).slice(2,6),ts:Date.now(),added_by:ME};
   const item={...base,cat,title,note:$('inputNote').value.trim(),link:$('inputLink').value.trim(),status:st,done:st==='done',
-    season:+$('fSeason').value||0,episode:+$('fEpisode').value||0,total:+$('fTotal').value||0,ratings,tags:$('fTags').value.trim(),poster};
+    season:+$('fSeason').value||0,episode:+$('fEpisode').value||0,total:+$('fTotal').value||0,ratings,tags:$('fTags').value.trim(),poster,coll:$('fColl').value.trim()};
   items[item.id]=item;render();closeModal();
   try{await upsertItem(item);setSyncState('live','сохранено');}catch(e){setSyncState('error','ошибка сохранения');}
   btn.disabled=false;btn.textContent='Сохранить';
@@ -258,4 +258,110 @@ addEventListener('load',()=>{
    <input class="cp-select" id="kRawg" placeholder="RAWG API key (игры)" value="${esc(KEY('rawg'))}" onchange="localStorage.setItem('wl_rawg',this.value.trim())">
    <button class="upload-btn" onclick="fillPosters()">🖼 Найти постеры для всех без обложки</button>
    <div style="font-size:11px;color:var(--text3)">Ключи бесплатные: themoviedb.org/settings/api и rawg.io/apidocs. Хранятся только на этом устройстве.</div></div>`);
+});
+
+/* ===== v4: хотим оба, карточка-детали, статистика, импорт, обои из сети ===== */
+let curColl='all',infoId=null;
+function updColl(){const s=$('collSel');if(!s)return;const cs=[...new Set(Object.values(items).filter(i=>i.cat===currentTab&&i.coll).map(i=>i.coll))];
+  const h='<option value="all">Все коллекции</option>'+cs.map(c=>`<option>${esc(c)}</option>`).join('');if(s.dataset.h!==h){s.innerHTML=h;s.dataset.h=h;}
+  if(!cs.includes(curColl))curColl='all';s.value=curColl;}
+function patch(id,o){items[id]={...items[id],...o};render();if(infoId===id&&$('info').classList.contains('open'))drawInfo();upsertItem(items[id]).catch(()=>setSyncState('error','ошибка'));}
+function toggleWant(id){const w={...(items[id].wants||{})};if(w[ME])delete w[ME];else w[ME]=1;beep();patch(id,{wants:w});}
+function react(id,e){const r={...(items[id].reacts||{})},n=[...(r[e]||[])],k=n.indexOf(ME);if(k<0)n.push(ME);else n.splice(k,1);r[e]=n;patch(id,{reacts:r});}
+function addCmt(){const t=$('cmt').value.trim();if(!t)return;patch(infoId,{comments:[...(items[infoId].comments||[]),{by:ME,text:t,ts:Date.now()}]});}
+async function findInfo(i){
+  const q=encodeURIComponent(i.title);
+  try{
+    if(i.cat==='anime'){const x=(await(await fetch('https://api.jikan.moe/v4/anime?limit=1&q='+q)).json()).data?.[0];if(x)return{ts:1,year:x.year||'',genres:(x.genres||[]).map(g=>g.name).join(', '),desc:x.synopsis||'',score:x.score||'',eps:x.episodes||0,trailer:x.trailer?.embed_url||'',poster:x.images?.jpg?.image_url||''};}
+    if((i.cat==='films'||i.cat==='series')&&KEY('tmdb')){const k=KEY('tmdb'),r=((await(await fetch(`https://api.themoviedb.org/3/search/multi?api_key=${k}&language=ru-RU&query=${q}`)).json()).results||[]).find(x=>x.media_type!=='person');
+      if(r){const v=((await(await fetch(`https://api.themoviedb.org/3/${r.media_type}/${r.id}/videos?api_key=${k}`)).json()).results||[]).find(x=>x.site==='YouTube');
+        return{ts:1,year:(r.release_date||r.first_air_date||'').slice(0,4),desc:r.overview||'',score:r.vote_average?+r.vote_average.toFixed(1):'',trailer:v?'https://www.youtube.com/embed/'+v.key:'',poster:r.poster_path?'https://image.tmdb.org/t/p/w300'+r.poster_path:''};}}
+    if(i.cat==='games'&&KEY('rawg')){const x=(await(await fetch(`https://api.rawg.io/api/games?key=${KEY('rawg')}&page_size=1&search=${q}`)).json()).results?.[0];if(x)return{ts:1,year:(x.released||'').slice(0,4),genres:(x.genres||[]).map(g=>g.name).join(', '),score:x.rating||'',poster:x.background_image||''};}
+  }catch(e){}
+  return{ts:1};
+}
+async function openInfo(id){
+  const i=items[id];if(!i)return;infoId=id;$('info').classList.add('open');drawInfo();
+  if(!i.info||!i.info.ts){const inf=await findInfo(i),c=items[id];if(c)patch(id,{info:inf,poster:c.poster||inf.poster||'',total:c.total||inf.eps||0});}
+}
+function showTrl(){$('trl').innerHTML=`<iframe src="${esc(items[infoId].info.trailer)}" allowfullscreen style="width:100%;aspect-ratio:16/9;border:0;border-radius:10px"></iframe>`;}
+function drawInfo(){
+  const i=items[infoId],f=i.info||{},rc=i.reacts||{},pic=i.poster||f.poster;
+  $('infoBody').innerHTML=`<div style="display:flex;gap:12px">${pic?`<img class="poster" style="width:90px;height:128px" src="${esc(pic)}">`:''}<div><h3 style="margin:0 0 6px">${esc(i.title)}</h3><div class="chips">${f.year?`<span>${esc(f.year)}</span>`:''}${f.genres?`<span>${esc(f.genres)}</span>`:''}${f.score?`<span class="rt">⭐ ${f.score}</span>`:''}</div></div></div>
+  ${f.desc?`<p style="font-size:13px;color:var(--text2);line-height:1.5;max-height:140px;overflow:auto">${esc(f.desc)}</p>`:(f.ts?'':'<p style="color:var(--text3)">Загружаю описание…</p>')}
+  ${f.trailer?`<div id="trl"><button class="upload-btn" onclick="showTrl()">▶️ Трейлер</button></div>`:''}
+  <div class="cr" style="margin:10px 0"><span class="cl">Дата просмотра</span><input type="date" value="${esc(i.watched_on||'')}" onchange="patch('${i.id}',{watched_on:this.value})"><label style="font-size:12px"><input type="checkbox" ${i.together?'checked':''} onchange="patch('${i.id}',{together:this.checked})"> вместе</label></div>
+  <div class="chips">${['👍','😂','😱','😢','🔥'].map(e=>{const n=rc[e]||[];return `<span class="stb" style="${n.includes(ME)?'outline:1px solid var(--accent)':''}" onclick="react('${i.id}','${e}')">${e} ${n.length||''}</span>`;}).join('')}</div>
+  <div style="margin:10px 0">${(i.comments||[]).map(c=>`<div style="font-size:12px;margin:4px 0"><b>${esc(c.by)}:</b> ${esc(c.text)}</div>`).join('')}</div>
+  <div class="cr"><input id="cmt" class="cp-select" placeholder="Комментарий…" onkeydown="if(event.key==='Enter')addCmt()"><button class="upload-btn" onclick="addCmt()">➤</button></div>`;
+}
+function roulette(){
+  const all=$('rouAll').checked,t=$('rouTitle');
+  const pool=Object.values(items).filter(i=>sOf(i)==='want'&&(all||i.cat===currentTab)&&(!$('rouBoth').checked||Object.keys(i.wants||{}).length>1));
+  $('rou').classList.add('open');t.classList.remove('win');
+  if(!pool.length){t.textContent='Подходящих нет';return;}
+  let n=0;clearInterval(roulette._t);
+  roulette._t=setInterval(()=>{t.textContent=pool[Math.floor(Math.random()*pool.length)].title;if(++n>22){clearInterval(roulette._t);t.classList.add('win');beep();}},90);
+}
+function night(){
+  const all=$('rouAll').checked,p=Object.values(items).filter(i=>sOf(i)==='want'&&(all||i.cat===currentTab)&&(!$('rouBoth').checked||Object.keys(i.wants||{}).length>1)).sort(()=>Math.random()-.5).slice(0,3);
+  $('rouPicks').innerHTML=p.map(i=>`<div class="pick" onclick="setStatus('${i.id}','watching');$('rou').classList.remove('open')">${i.poster?`<img src="${esc(i.poster)}">`:''}<span>${esc(i.title)}</span></div>`).join('')||'<small>Пусто</small>';
+}
+function bars(o,max){return Object.entries(o).map(([k,v])=>`<div class="br"><span>${esc(k)}</span><div class="bw"><i style="width:${Math.max(3,v/max*100)}%"></i></div><b>${v}</b></div>`).join('');}
+function stats(){
+  const all=Object.values(items),done=all.filter(i=>sOf(i)==='done'),yr=new Date().getFullYear(),cats={},g={},m={},rt={};
+  getAllCats().forEach(c=>cats[c.name]=done.filter(i=>i.cat===c.id).length);
+  done.forEach(i=>(i.info?.genres||'').split(',').map(x=>x.trim()).filter(Boolean).forEach(x=>g[x]=(g[x]||0)+1));
+  const top=Object.fromEntries(Object.entries(g).sort((a,b)=>b[1]-a[1]).slice(0,6));
+  for(let k=1;k<=12;k++)m[k]=0;done.forEach(i=>{const d=new Date(i.watched_on||i.ts);if(d.getFullYear()===yr)m[d.getMonth()+1]++;});
+  all.forEach(i=>Object.entries(i.ratings||{}).forEach(([n,v])=>(rt[n]=rt[n]||[]).push(v)));
+  const avg=Object.fromEntries(Object.entries(rt).map(([n,a])=>[n,+(a.reduce((x,y)=>x+y,0)/a.length).toFixed(1)]));
+  const mx=o=>Math.max(1,...Object.values(o));
+  $('statsBody').innerHTML=`<h3 style="margin-top:0">Итоги ${yr}</h3><p>Просмотрено всего: <b>${done.length}</b> · вместе: <b>${done.filter(i=>i.together).length}</b></p><h4>По категориям</h4>${bars(cats,mx(cats))}<h4>Жанры</h4>${bars(top,mx(top))||'<small>Открой карточки, чтобы подтянулись жанры</small>'}<h4>По месяцам</h4>${bars(m,mx(m))}<h4>Средняя оценка</h4>${bars(avg,10)||'<small>Оценок пока нет</small>'}`;
+  $('stats').classList.add('open');
+}
+async function doImport(){
+  let t=$('impText').value;const f=$('impFile').files[0];if(f)t=await f.text();let L=[];
+  if(t.trim().startsWith('<')){const st={Completed:'done',Watching:'watching','On-Hold':'later',Dropped:'dropped'};L=[...new DOMParser().parseFromString(t,'text/xml').querySelectorAll('anime')].map(a=>({t:a.querySelector('series_title')?.textContent,c:'anime',s:st[a.querySelector('my_status')?.textContent]||'want'}));}
+  else{const R=t.split(/\r?\n/).map(x=>x.trim()).filter(Boolean),sp=l=>[...l.matchAll(/"([^"]*)"|([^,]+)/g)].map(m=>m[1]??m[2]);
+    if(R[0]&&R[0].includes(',')&&/name/i.test(R[0])){const k=sp(R[0]).findIndex(x=>/^name$/i.test(x));L=R.slice(1).map(l=>({t:sp(l)[k],c:currentTab,s:'done'}));}
+    else L=R.map(x=>({t:x,c:currentTab,s:'want'}));}
+  const have=new Set(Object.values(items).map(i=>i.title.toLowerCase()));
+  const rows=L.filter(x=>x.t&&!have.has(x.t.toLowerCase())).map((x,k)=>({id:Date.now().toString(36)+k.toString(36)+Math.random().toString(36).slice(2,5),cat:x.c,title:x.t,note:'',link:'',status:x.s,done:x.s==='done',ts:Date.now()+k,added_by:ME}));
+  if(!rows.length){toast('Нечего импортировать');return;}
+  rows.forEach(r=>items[r.id]=r);render();$('imp').classList.remove('open');$('impText').value='';
+  try{await sbFetch('/items',{method:'POST',headers:{Prefer:'resolution=merge-duplicates'},body:JSON.stringify(rows)});toast('Добавлено: '+rows.length);}catch(e){toast('Ошибка импорта');}
+}
+function setBgUrl(u){u=(u||$('urlBg').value).trim();if(!u)return;C.bg=u;C.bgGrad=false;$('bgGradToggle').checked=false;saveCustom();applyBg();toast('Обои установлены');}
+async function whSearch(){
+  const q=encodeURIComponent($('whQ').value.trim()),r=$('whRes');r.textContent='Ищу…';
+  try{const d=await(await fetch(`https://wallhaven.cc/api/v1/search?q=${q}&sorting=${$('whS').value}&categories=111&purity=100&atleast=1280x720`)).json();
+    r.innerHTML=(d.data||[]).slice(0,24).map(x=>`<img loading="lazy" src="${x.thumbs.small}" onclick="setBgUrl('${x.path}')">`).join('')||'Ничего не найдено';}
+  catch(e){r.textContent='Wallhaven недоступен. Вставь прямую ссылку на картинку ниже.';}
+}
+addEventListener('load',()=>{
+  const css=document.createElement('style');
+  css.textContent=`.both{box-shadow:inset 0 0 0 2px #ff6fa5}.whgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}.whgrid img{width:100%;height:64px;object-fit:cover;border-radius:6px;cursor:pointer}
+  .br{display:flex;align-items:center;gap:8px;font-size:12px;margin:4px 0}.br span{width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.bw{flex:1}.bw i{display:block;height:8px;background:var(--accent);border-radius:4px}
+  .pick{display:inline-block;width:30%;margin:4px;cursor:pointer;font-size:12px;vertical-align:top}.pick img{width:100%;aspect-ratio:2/3;object-fit:cover;border-radius:8px}`;
+  document.head.appendChild(css);
+  const cl="if(event.target===this)this.classList.remove('open')";
+  document.body.insertAdjacentHTML('beforeend',`
+   <div id="info" class="overlay" onclick="${cl}"><div class="modal" id="infoBody"></div></div>
+   <div id="stats" class="overlay" onclick="${cl}"><div class="modal" id="statsBody"></div></div>
+   <div id="imp" class="overlay" onclick="${cl}"><div class="modal"><div class="modal-title">📥 Импорт в текущую категорию</div>
+    <div class="field"><label>Названия, по одному в строке</label><textarea id="impText" style="height:110px"></textarea></div>
+    <div class="field"><label>или файл: Letterboxd CSV / MyAnimeList XML</label><input type="file" id="impFile" accept=".csv,.xml,.txt" style="display:block"></div>
+    <div class="btn-row"><button class="btn btn-secondary" onclick="$('imp').classList.remove('open')">Закрыть</button><button class="btn btn-primary" onclick="doImport()">Импортировать</button></div></div></div>`);
+  $('rouAll').parentElement.insertAdjacentHTML('afterend','<br><label style="font-size:12px;color:var(--text2)"><input type="checkbox" id="rouBoth"> только «хотим оба»</label><div id="rouPicks"></div><button class="upload-btn" style="margin-top:8px" onclick="night()">🍿 3 варианта на вечер</button>');
+  $('fPoster').closest('.field').insertAdjacentHTML('afterend','<div class="field"><label>Коллекция</label><input id="fColl" placeholder="например: Ужастики на Хэллоуин"></div>');
+  document.querySelector('.toolbar').insertAdjacentHTML('beforeend','<select id="collSel" class="sort-select" onchange="curColl=this.value;render()"></select><button class="filter-btn" onclick="stats()">📊</button><button class="filter-btn" onclick="$(\'imp\').classList.add(\'open\')">📥</button>');
+  document.querySelector('[data-page="bg"]').insertAdjacentHTML('beforeend',`<div class="sep"></div><div class="cs"><div class="cs-title">Обои из интернета</div>
+   <div class="cr"><input id="whQ" class="cp-select" placeholder="Wallhaven: anime, sakura, forest…" onkeydown="if(event.key==='Enter')whSearch()"><button class="upload-btn" onclick="whSearch()">Найти</button></div>
+   <select id="whS" class="cp-select"><option value="relevance">Релевантные</option><option value="toplist">Топ</option><option value="random">Случайные</option><option value="views">По просмотрам</option></select>
+   <div id="whRes" class="whgrid"></div>
+   <div class="cs-title">Своя ссылка на картинку</div>
+   <div class="cr"><input id="urlBg" class="cp-select" placeholder="Pinterest (i.pinimg.com), Imgur и др."><button class="upload-btn" onclick="setBgUrl()">Поставить</button></div>
+   <div style="font-size:11px;color:var(--text3)">Pinterest: открой пин, ПКМ по картинке, «Копировать адрес изображения» (i.pinimg.com…). Ссылка на страницу пина не подойдёт.</div></div>`);
+  updColl();
 });
