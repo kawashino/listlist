@@ -63,14 +63,13 @@ function fillForm(i){
 }
 function openModal(){editingId=null;fillForm({});}
 function editItem(id){const i=items[id];if(!i)return;editingId=id;fillForm(i);}
-async function findPoster(q){try{const r=await fetch('https://api.jikan.moe/v4/anime?limit=1&q='+encodeURIComponent(q));const d=await r.json();return d.data?.[0]?.images?.jpg?.image_url||'';}catch(e){return'';}}
 async function saveItem(){
   const title=$('inputTitle').value.trim();if(!title){$('inputTitle').focus();return;}
   const old=editingId?items[editingId]:null,st=$('fStatus').value,rate=parseFloat($('fRating').value)||0,cat=$('inputCat').value||currentTab;
   const ratings={...(old&&old.ratings||{})};if(rate>0)ratings[ME]=rate;else delete ratings[ME];
   const btn=$('saveBtn');btn.disabled=true;btn.textContent='Сохраняем...';
   let poster=$('fPoster').value.trim();
-  if(!poster&&cat==='anime')poster=await findPoster(title);
+  if(!poster)poster=await findPoster(title,cat);
   const base=old||{id:Date.now().toString(36)+Math.random().toString(36).slice(2,6),ts:Date.now(),added_by:ME};
   const item={...base,cat,title,note:$('inputNote').value.trim(),link:$('inputLink').value.trim(),status:st,done:st==='done',
     season:+$('fSeason').value||0,episode:+$('fEpisode').value||0,total:+$('fTotal').value||0,ratings,tags:$('fTags').value.trim(),poster};
@@ -200,4 +199,63 @@ addEventListener('load',()=>{
     <button class="upload-btn" onclick="switchMe()">👤 Я: <span id="meName">${esc(ME)}</span> (сменить)</button></div></div>`);
   renderThemes();fxSync();fxStart();
   if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+});
+
+/* ===== v3: облако (Storage + settings), постеры TMDB/RAWG, прокрутка вкладок ===== */
+const KEY=k=>localStorage.getItem('wl_'+k)||'';
+async function findPoster(q,cat){
+  try{
+    if(cat==='anime'){const d=await(await fetch('https://api.jikan.moe/v4/anime?limit=1&q='+encodeURIComponent(q))).json();return d.data?.[0]?.images?.jpg?.image_url||'';}
+    if((cat==='films'||cat==='series')&&KEY('tmdb')){const d=await(await fetch(`https://api.themoviedb.org/3/search/multi?api_key=${KEY('tmdb')}&language=ru-RU&query=${encodeURIComponent(q)}`)).json();const r=(d.results||[]).find(x=>x.poster_path);return r?'https://image.tmdb.org/t/p/w300'+r.poster_path:'';}
+    if(cat==='games'&&KEY('rawg')){const d=await(await fetch(`https://api.rawg.io/api/games?key=${KEY('rawg')}&page_size=1&search=${encodeURIComponent(q)}`)).json();return d.results?.[0]?.background_image||'';}
+  }catch(e){}
+  return '';
+}
+async function fillPosters(){
+  const todo=Object.values(items).filter(i=>!i.poster);let n=0,ok=0;toast('Ищу постеры…');
+  for(const i of todo){const p=await findPoster(i.title,i.cat);n++;if(p){items[i.id]={...i,poster:p};ok++;try{await upsertItem(items[i.id]);}catch(e){}}if(n%5==0)render();await new Promise(r=>setTimeout(r,400));}
+  render();toast(`Готово: найдено ${ok} из ${n}`);
+}
+async function upload(f,kind){
+  const path=`${kind}/${(ME||'x').replace(/\W/g,'')}-${Date.now()}.${(f.name.split('.').pop()||'bin').toLowerCase()}`;
+  const r=await fetch(`${SUPA_URL}/storage/v1/object/media/${path}`,{method:'POST',headers:{apikey:SUPA_KEY,Authorization:`Bearer ${SUPA_KEY}`,'Content-Type':f.type||'application/octet-stream','x-upsert':'true'},body:f});
+  if(!r.ok)throw new Error(await r.text());
+  return `${SUPA_URL}/storage/v1/object/public/media/${path}`;
+}
+async function shrink(f,max){const b=await createImageBitmap(f),k=Math.min(1,max/Math.max(b.width,b.height)),c=document.createElement('canvas');c.width=Math.round(b.width*k);c.height=Math.round(b.height*k);c.getContext('2d').drawImage(b,0,0,c.width,c.height);return c.toDataURL('image/webp',.85);}
+async function loadBg(inp){
+  const f=inp.files[0];if(!f)return;toast('Загружаю фон…');
+  try{C.bg=await upload(f,'bg');C.bgGrad=false;$('bgGradToggle').checked=false;saveCustom();applyBg();toast('Фон загружен без потери качества');}
+  catch(e){toast('Не вышло загрузить: выполни SQL для хранилища');}
+}
+async function loadIcon(inp,key){const f=inp.files[0];if(!f)return;C.icons[key]=await shrink(f,96);saveCustom();applyAllIcons();}
+async function upPoster(inp){const f=inp.files[0];if(!f)return;try{$('fPoster').value=await upload(f,'poster');}catch(e){toast('Не вышло загрузить постер');}}
+
+async function pushTheme(){
+  try{const d={...C};if(d.bg&&d.bg.startsWith('data:'))d.bg=null;const ts=Date.now();
+    await sbFetch('/settings',{method:'POST',headers:{Prefer:'resolution=merge-duplicates'},body:JSON.stringify({id:'theme_'+ME,data:d,updated_at:ts})});
+    localStorage.setItem('wl_theme_ts',ts);}catch(e){}
+}
+async function pullTheme(){
+  try{const r=await sbFetch('/settings?id=eq.'+encodeURIComponent('theme_'+ME)),row=r&&r[0];
+    if(!row)return pushTheme();
+    if(row.updated_at>(+localStorage.getItem('wl_theme_ts')||0)){
+      C={...JSON.parse(JSON.stringify(CD)),...row.data};C.icons={...CD.icons,...C.icons};
+      localStorage.setItem('wl_custom',JSON.stringify(C));localStorage.setItem('wl_theme_ts',row.updated_at);
+      applyCustom();syncControls();fxSync();fxStart();renderIconPreviews();render();}
+  }catch(e){}
+}
+const _sc=saveCustom;saveCustom=function(){try{_sc();}catch(e){}clearTimeout(saveCustom._t);saveCustom._t=setTimeout(pushTheme,1500);};
+const _init2=initApp;initApp=async function(){await _init2();pullTheme();};
+
+addEventListener('load',()=>{
+  const css=document.createElement('style');
+  css.textContent='.cp-tabs{flex-wrap:wrap;overflow:visible}.cp-tab{padding:9px 12px}';
+  document.head.appendChild(css);
+  $('fPoster').insertAdjacentHTML('afterend','<button type="button" class="upload-btn" style="margin-top:6px" onclick="$(\'fPosterFile\').click()">📁 Загрузить с устройства</button><input type="file" id="fPosterFile" accept="image/*" onchange="upPoster(this)">');
+  document.querySelector('[data-page="fx"]').insertAdjacentHTML('beforeend',`<div class="sep"></div><div class="cs"><div class="cs-title">Постеры</div>
+   <input class="cp-select" id="kTmdb" placeholder="TMDB API key (фильмы и сериалы)" value="${esc(KEY('tmdb'))}" onchange="localStorage.setItem('wl_tmdb',this.value.trim())">
+   <input class="cp-select" id="kRawg" placeholder="RAWG API key (игры)" value="${esc(KEY('rawg'))}" onchange="localStorage.setItem('wl_rawg',this.value.trim())">
+   <button class="upload-btn" onclick="fillPosters()">🖼 Найти постеры для всех без обложки</button>
+   <div style="font-size:11px;color:var(--text3)">Ключи бесплатные: themoviedb.org/settings/api и rawg.io/apidocs. Хранятся только на этом устройстве.</div></div>`);
 });
