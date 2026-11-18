@@ -79,18 +79,37 @@ async function sbFetch(path, opts = {}) {
   return text ? JSON.parse(text) : null;
 }
 
+const SNAP = {};  // последнее известное серверное состояние карточек: в базу уходят только изменённые поля
 async function loadAllItems() {
-  const rows = await sbFetch('/items?select=*&order=ts.desc');
-  items = {};
-  (rows || []).forEach(r => { items[r.id] = r; });
+  try {
+    const rows = await sbFetch('/items?select=*&order=ts.desc');
+    items = {};
+    (rows || []).forEach(r => { items[r.id] = r; });
+    localStorage.setItem('wl_cache', JSON.stringify(items));
+  } catch(e) {
+    const c = localStorage.getItem('wl_cache');   // нет сети: показываем последний сохранённый список
+    if (!c) throw e;
+    items = JSON.parse(c);
+    setSyncState('error', 'офлайн');
+  }
+  Object.values(items).forEach(i => SNAP[i.id] = JSON.stringify(i));
 }
 
 async function upsertItem(item) {
-  await sbFetch('/items', {
-    method: 'POST',
-    headers: { 'Prefer': 'resolution=merge-duplicates' },
-    body: JSON.stringify(item)
-  });
+  const old = SNAP[item.id] ? JSON.parse(SNAP[item.id]) : null;
+  if (!old) {
+    await sbFetch('/items', {
+      method: 'POST',
+      headers: { 'Prefer': 'resolution=merge-duplicates' },
+      body: JSON.stringify(item)
+    });
+  } else {
+    const d = {};
+    for (const k in item) if (JSON.stringify(item[k]) !== JSON.stringify(old[k])) d[k] = item[k];
+    if (!Object.keys(d).length) return;
+    await sbFetch('/items?id=eq.' + encodeURIComponent(item.id), { method: 'PATCH', body: JSON.stringify(d) });
+  }
+  SNAP[item.id] = JSON.stringify(item);
 }
 
 async function deleteItemDb(id) {
@@ -138,6 +157,7 @@ window.addEventListener('load', () => {
 });
 
 async function initApp() {
+  ensureMe();
   setSyncState('loading', 'подключение...');
   try {
     await loadAllItems();
@@ -151,6 +171,10 @@ async function initApp() {
     document.getElementById('mainApp').style.display = 'none';
     showSetupError('Ошибка подключения: ' + e.message);
   }
+  if (document.getElementById('meName')) document.getElementById('meName').textContent = ME;
+  pullTheme();                          // оформление из облака
+  setTimeout(autoRefresh, 6000);        // фоновое обновление данных карточек
+  setTimeout(() => usage(true), 9000);  // предупреждение о заполнении хранилища
 }
 
 function showMain() { document.getElementById('setupScreen').classList.remove('visible'); document.getElementById('mainApp').style.display='flex'; }
@@ -161,10 +185,16 @@ function hideSetupError() { const e=document.getElementById('setupError'); if(e)
 function setSyncState(s,l) { const d=document.getElementById('syncDot'),lb=document.getElementById('syncLabel'); if(d)d.className='sync-dot '+s; if(lb)lb.textContent=l; }
 
 // ===== TABS =====
-function getAllCats() {
+function baseCats() {
   return [{id:'anime',name:'Аниме',icon:'🎌'},{id:'games',name:'Игры',icon:'🎮'},{id:'series',name:'Сериалы',icon:'📺'},{id:'films',name:'Фильмы',icon:'🎬'},...(C.customCats||[])];
 }
+// видимые вкладки с учётом переименования, порядка и скрытия из настроек (C.tabs)
+function getAllCats() {
+  const t = C.tabs || {};
+  return baseCats().map((c, k) => ({...c, name: t[c.id]?.n || c.name, _o: t[c.id]?.o ?? k, _h: t[c.id]?.h})).filter(c => !c._h).sort((a, b) => a._o - b._o);
+}
 function renderTabs() {
+  const v = getAllCats(); if (v.length && !v.some(c => c.id === currentTab)) currentTab = v[0].id;  // скрытую вкладку не показываем
   const nav=document.getElementById('tabsNav'); if(!nav)return;
   const cats=getAllCats();
   document.documentElement.style.setProperty('--tab-count',cats.length);
@@ -175,6 +205,14 @@ function renderTabs() {
       <span class="badge" id="badge-${cat.id}"></span>
       ${cat.id.startsWith('cat_')?`<span class="tab-close" onclick="event.stopPropagation();removeCustomCat('${cat.id}')">✕</span>`:''}
     </div>`).join('');
+  colorTabs();
+}
+function colorTabs() {
+  document.querySelectorAll('.tab').forEach(t => {
+    const id = t.dataset.cat, c = C.tabs?.[id]?.c || (id.startsWith('cat_') ? 'var(--accent)' : '');
+    if (t.classList.contains('active') && c) { t.style.color = c; t.style.borderTop = '2px solid ' + c; }
+    else { t.style.color = ''; t.style.borderTop = ''; }
+  });
 }
 function setTab(cat) { currentTab=cat; renderTabs(); document.getElementById('fab').dataset.cat=cat; render(); }
 function setFilter(f,btn) { currentFilter=f; document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); render(); }
@@ -187,6 +225,8 @@ function sortItems(arr) {
     case 'alpha_asc':  return cp.sort((a,b)=>a.title.localeCompare(b.title,'ru'));
     case 'alpha_desc': return cp.sort((a,b)=>b.title.localeCompare(a.title,'ru'));
     case 'status':     return cp.sort((a,b)=>a.done-b.done);
+    case 'rating':     return cp.sort((x,y)=>avgR(y)-avgR(x));
+    case 'year':       return cp.sort((x,y)=>(+y.info?.year||0)-(+x.info?.year||0));
     default:           return cp.sort((a,b)=>b.ts-a.ts);
   }
 }
