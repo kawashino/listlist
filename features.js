@@ -3,7 +3,9 @@
    внедрение интерфейса, v3 облако и постеры, v4 «хотим оба»/детали/статистика/импорт/обои,
    v5 источники постеров, v6 умное добавление/серии/франшизы/фильтры, v7 оформление/вкладки/скорость,
    v8 расположение и виды карточек.
-   Чистка кода: часть 1 (мёртвые дубли удалены). Дальше: свернуть цепочки обёрток, разнести по модулям. */
+   Чистка кода: часть 1 (мёртвые дубли), часть 2 (цепочки обёрток свёрнуты в обычные функции).
+   Остаются одиночные обёртки над app.js/custom.js: saveCustom, applyCustom, getAllCats, renderTabs, cands, upsertItem, toggleCustom, sortItems.
+   Дальше: разнести по модулям. */
 const ST={want:'🕒 Хочу',watching:'▶️ Смотрю',done:'✅ Посмотрел',dropped:'❌ Брошено',later:'⏸ Отложено'};
 const EP=['anime','series'];
 let ME=localStorage.getItem('wl_me')||'',curStatus='all';
@@ -13,14 +15,15 @@ const $=id=>document.getElementById(id);
 function ensureMe(){if(!ME){ME=(prompt('Как тебя зовут? (для оценок и пометки «кто добавил»)')||'').trim()||'Я';localStorage.setItem('wl_me',ME);}}
 
 /* ===== обёртки над app.js ===== */
-const _init=initApp;initApp=async function(){ensureMe();await _init();if($('meName'))$('meName').textContent=ME;};
-const _load=loadAllItems;loadAllItems=async function(){
-  try{await _load();localStorage.setItem('wl_cache',JSON.stringify(items));}
-  catch(e){const c=localStorage.getItem('wl_cache');if(c){items=JSON.parse(c);setSyncState('error','офлайн');return;}throw e;}
+const _initApp=initApp;initApp=async function(){ensureMe();await _initApp();if($('meName'))$('meName').textContent=ME;pullTheme();setTimeout(autoRefresh,6000);setTimeout(()=>usage(true),9000);};
+const _loadAllItems=loadAllItems;loadAllItems=async function(){
+  try{await _loadAllItems();localStorage.setItem('wl_cache',JSON.stringify(items));}
+  catch(e){const c=localStorage.getItem('wl_cache');if(!c)throw e;items=JSON.parse(c);setSyncState('error','офлайн');}
+  Object.values(items).forEach(i=>SNAP[i.id]=JSON.stringify(i));
 };
 
 /* ===== карточки ===== */
-function render(){
+function renderList(){
   renderTabs();
   const list=$('list'),all=Object.values(items);
   let arr=all.filter(i=>i.cat===currentTab);
@@ -144,7 +147,7 @@ function fxStart(){
 }
 addEventListener('pointermove',e=>{if(FX().trail){trail.push({x:e.clientX,y:e.clientY,l:1,h:Date.now()/8%360});if(trail.length>45)trail.shift();}});
 addEventListener('resize',()=>{if(cv){cv.width=innerWidth;cv.height=innerHeight;}});
-function beep(){if(!FX().sound)return;try{au=au||new AudioContext();const o=au.createOscillator(),g=au.createGain();o.frequency.value=660;g.gain.setValueAtTime(.08,au.currentTime);g.gain.exponentialRampToValueAtTime(.001,au.currentTime+.15);o.connect(g);g.connect(au.destination);o.start();o.stop(au.currentTime+.15);}catch(e){}}
+function playBeep(){if(!FX().sound)return;try{au=au||new AudioContext();const o=au.createOscillator(),g=au.createGain();o.frequency.value=660;g.gain.setValueAtTime(.08,au.currentTime);g.gain.exponentialRampToValueAtTime(.001,au.currentTime+.15);o.connect(g);g.connect(au.destination);o.start();o.stop(au.currentTime+.15);}catch(e){}}
 
 /* ===== PWA, бэкап, профиль ===== */
 let dip;addEventListener('beforeinstallprompt',e=>{e.preventDefault();dip=e;});
@@ -228,7 +231,6 @@ async function pullTheme(){
   }catch(e){}
 }
 const _sc=saveCustom;saveCustom=function(){try{_sc();}catch(e){}clearTimeout(saveCustom._t);saveCustom._t=setTimeout(pushTheme,1500);};
-const _init2=initApp;initApp=async function(){await _init2();pullTheme();};
 
 addEventListener('load',()=>{
   const css=document.createElement('style');
@@ -253,7 +255,7 @@ async function openInfo(id){
   if(!i.info||!i.info.ts||(!i.info.poster&&!i.poster)){const inf=await findInfo(i),c=items[id];if(c)patch(id,{info:inf,poster:c.poster||inf.poster||'',total:c.total||inf.eps||0});}
 }
 function showTrl(){$('trl').innerHTML=`<iframe src="${esc(items[infoId].info.trailer)}" allowfullscreen style="width:100%;aspect-ratio:16/9;border:0;border-radius:10px"></iframe>`;}
-function drawInfo(){
+function drawInfoMain(){
   const i=items[infoId],f=i.info||{},rc=i.reacts||{},pic=i.poster||f.poster;
   $('infoBody').innerHTML=`<div style="display:flex;gap:12px">${pic?`<img class="poster" style="width:90px;height:128px" src="${esc(pic)}">`:''}<div><h3 style="margin:0 0 6px">${esc(i.title)}</h3><div class="chips">${f.year?`<span>${esc(f.year)}</span>`:''}${f.genres?`<span>${esc(f.genres)}</span>`:''}${f.score?`<span class="rt">⭐ ${f.score}</span>`:''}</div></div></div>
   ${f.desc?`<p style="font-size:13px;color:var(--text2);line-height:1.5;max-height:140px;overflow:auto">${esc(f.desc)}</p>`:(f.ts?'':'<p style="color:var(--text3)">Загружаю описание…</p>')}
@@ -373,8 +375,8 @@ async function fillPosters(){
     await new Promise(r=>setTimeout(r,700));}
   render();toast(`Готово: найдено ${ok} из ${n}`);
 }
-const _draw=drawInfo;drawInfo=function(){_draw();
-  $('infoBody').insertAdjacentHTML('beforeend','<div style="margin-top:12px"><div class="cr"><input id="pq" class="cp-select" placeholder="Название для поиска (англ. или оригинал)"><button class="upload-btn" onclick="pickPoster()">🖼 Найти</button></div><div id="posterPick" class="whgrid" style="margin-top:8px"></div></div>');};
+function infoPosterPicker(){
+  $('infoBody').insertAdjacentHTML('beforeend','<div style="margin-top:12px"><div class="cr"><input id="pq" class="cp-select" placeholder="Название для поиска (англ. или оригинал)"><button class="upload-btn" onclick="pickPoster()">🖼 Найти</button></div><div id="posterPick" class="whgrid" style="margin-top:8px"></div></div>');}
 async function pickPoster(){
   const i=items[infoId],g=$('posterPick');g.textContent='Ищу…';
   const c=await cands(($('pq').value.trim())||i.title,i.cat);
@@ -426,13 +428,13 @@ function togEp(n){
 }
 function setSeason(d){const i=items[infoId],S=Math.max(1,(i.season||1)+d);patch(infoId,{season:S,episode:Math.max(0,...((i.seen||{})[S]||[0]))});}
 function setFear(n){patch(infoId,{fear:n});}
-const _draw2=drawInfo;drawInfo=function(){
-  _draw2();const i=items[infoId];if(!i)return;
+function infoEpisodesAndFear(){
+  const i=items[infoId];if(!i)return;
   const S=i.season||1,seen=new Set((i.seen||{})[S]||[]),T=Math.min(+i.total||0,300);let h='';
   if(EP.includes(i.cat))h+=`<div class="cs-title" style="margin-top:12px">Сезон <button class="upload-btn" onclick="setSeason(-1)">◀</button> ${S} <button class="upload-btn" onclick="setSeason(1)">▶</button> · просмотрено ${seen.size}${T?'/'+T+', осталось '+Math.max(0,T-seen.size):''}</div>`+(T?`<div class="eg">${Array.from({length:T},(_,k)=>`<b class="${seen.has(k+1)?'on':''}" onclick="togEp(${k+1})">${k+1}</b>`).join('')}</div>`:'<small style="color:var(--text3)">Укажи «Всего серий» в форме редактирования</small>');
   h+=`<div class="cs-title" style="margin-top:12px">Насколько страшно</div><div class="chips">${[1,2,3,4,5].map(n=>`<span class="stb" style="${(i.fear||0)>=n?'background:var(--accent-glow)':''}" onclick="setFear(${n})">💀</span>`).join('')}<span class="stb" onclick="setFear(0)">сброс</span><label style="font-size:12px"><input type="checkbox" ${i.scary?'checked':''} onchange="patch(infoId,{scary:this.checked})"> скримеры</label></div>`;
   $('infoBody').firstElementChild.insertAdjacentHTML('afterend',h);
-};
+}
 /* 19: умные фильтры */
 const avgR=i=>{const r=Object.values(i.ratings||{}).filter(v=>v>0);return r.length?r.reduce((a,b)=>a+b,0)/r.length:(+i.info?.score||0);};
 function smartOk(i){
@@ -474,7 +476,7 @@ let shown=60,lastTotal=0,sig='',showArch=false,px=0;
 const io=new IntersectionObserver(e=>{if(e[0].isIntersecting){io.disconnect();shown+=60;render();}});
 
 /* --- применение настроек --- */
-function applyUI(){
+function applyUiCore(){
   const u=U(),r=document.documentElement.style,b=document.body.classList;
   r.setProperty('--glow',u.glow+'px');r.setProperty('--glowc',u.glowC);r.setProperty('--ga',u.gA);r.setProperty('--gb',u.gB);r.setProperty('--cols',u.cols);r.setProperty('--dens',u.dens);
   b.toggle('glow',u.glow>0);b.toggle('gradb',!!u.grad);b.toggle('navb',!!u.nav);b.toggle('fabl',!!u.fabL);
@@ -498,7 +500,7 @@ addEventListener('deviceorientation',e=>{if(U().par&&e.gamma!=null)par(-Math.max
 function togPar(v){if(v&&window.DeviceOrientationEvent&&DeviceOrientationEvent.requestPermission)DeviceOrientationEvent.requestPermission().catch(()=>{});setU('par',v);}
 let ly=0;addEventListener('scroll',()=>{const y=scrollY,hid=U().hide&&y>ly&&y>90,h=document.querySelector('header');if(h)h.classList.toggle('hid',hid);document.body.classList.toggle('hh',hid);ly=y;},{passive:true});
 const _ac=applyCustom;applyCustom=function(){_ac();applyUI();};
-const _beep=beep;beep=function(){if(U().vib&&navigator.vibrate)navigator.vibrate(12);_beep();};
+function beep(){if(U().vib&&navigator.vibrate)navigator.vibrate(12);playBeep();}
 addEventListener('keydown',e=>{
   if(/INPUT|TEXTAREA|SELECT/.test(e.target.tagName)||e.ctrlKey||e.metaKey||e.altKey)return;const k=e.key.toLowerCase();
   if(k==='n'){e.preventDefault();openModal();}else if(k==='/'){e.preventDefault();$('searchInput').focus();}else if(k==='r')roulette();else if(k==='s')stats();else if(k==='f')$('flt').classList.add('open');
@@ -533,7 +535,6 @@ upsertItem=async function(item){
     await sbFetch('/items?id=eq.'+encodeURIComponent(item.id),{method:'PATCH',body:JSON.stringify(d)});}
   SNAP[item.id]=JSON.stringify(item);
 };
-const _load2=loadAllItems;loadAllItems=async function(){await _load2();Object.values(items).forEach(i=>SNAP[i.id]=JSON.stringify(i));};
 function mergeShared(k,cur,mine){
   if(k==='wants'){const r={...(cur||{})};if(mine[ME])r[ME]=1;else delete r[ME];return r;}
   if(k==='reacts'){const r={};cur=cur||{};new Set([...Object.keys(cur),...Object.keys(mine)]).forEach(e=>{const s=new Set(cur[e]||[]);(mine[e]||[]).includes(ME)?s.add(ME):s.delete(ME);r[e]=[...s];});return r;}
@@ -546,11 +547,12 @@ async function patch(id,o){
 }
 
 /* --- оптимизация (101), автообновление (88), лимиты (102) --- */
-const _r2=render;render=function(){
+function render(){
   const sg=[currentTab,currentFilter,curStatus,searchQuery,curColl,curFr,currentSort,JSON.stringify(SF),showArch].join('|');if(sg!==sig){sig=sg;shown=60;}
-  lastTotal=0;_r2();
+  lastTotal=0;renderList();
   if(lastTotal>shown){$('list').insertAdjacentHTML('beforeend',`<div id="more" class="stb" style="grid-column:1/-1;text-align:center;padding:12px;cursor:pointer" onclick="shown+=60;render()">Показать ещё (${lastTotal-shown})</div>`);io.observe($('more'));}
-};
+  try{localStorage.setItem('wl_state',JSON.stringify({t:currentTab,f:currentFilter,s:currentSort}));}catch(e){}
+}
 async function autoRefresh(){
   const week=6048e5,todo=Object.values(items).filter(i=>sOf(i)!=='done'&&(!i.info||!i.info.upd||Date.now()-i.info.upd>week)).slice(0,6);
   for(const i of todo){const f=await lookup(i),cur=items[i.id];if(!cur)continue;const nz=Object.fromEntries(Object.entries(f).filter(([,v])=>v));
@@ -565,15 +567,15 @@ async function usage(silent){
     el.innerHTML=`Файлы: <b>${(bytes/1048576).toFixed(1)} МБ</b> (${n} шт.), карточек: <b>${Object.keys(items).length}</b>.${warn?' ⚠️ почти заполнено.':''} Точные лимиты: Supabase → Project → Usage.`;}
   catch(e){if(!silent)el.textContent='Не удалось получить данные';}
 }
-const _init3=initApp;initApp=async function(){await _init3();setTimeout(autoRefresh,6000);setTimeout(()=>usage(true),9000);};
 
 /* --- панель «Ещё» и архив (97) --- */
-const _draw3=drawInfo;drawInfo=function(){_draw3();const i=items[infoId];if(i)$('infoBody').insertAdjacentHTML('beforeend',`<div style="margin-top:12px"><button class="upload-btn" onclick="patch(infoId,{archived:!items[infoId].archived})">📦 ${i.archived?'Вернуть из архива':'В архив'}</button></div>`);};
+function infoArchiveButton(){const i=items[infoId];if(i)$('infoBody').insertAdjacentHTML('beforeend',`<div style="margin-top:12px"><button class="upload-btn" onclick="patch(infoId,{archived:!items[infoId].archived})">📦 ${i.archived?'Вернуть из архива':'В архив'}</button></div>`);}
+function drawInfo(){drawInfoMain();infoPosterPicker();infoEpisodesAndFear();infoArchiveButton();}
 const rw=(l,x)=>`<div class="rr"><span class="cl">${l}</span>${x}</div>`;
 const rg=(k,a,b,st=1)=>`<input type="range" min="${a}" max="${b}" step="${st}" value="${U()[k]}" oninput="setU('${k}',+this.value)">`;
 const tg=(k,f)=>`<label class="toggle"><input type="checkbox" ${U()[k]?'checked':''} onchange="${f||`setU('${k}',this.checked)`}"><span class="tslider"></span></label>`;
 const cl=k=>`<input type="color" value="${U()[k]}" oninput="setU('${k}',this.value)">`;
-function drawMore(){
+function drawMoreMain(){
   $('moreBody').innerHTML=`<div class="cs"><div class="cs-title">Карточки</div>
    ${rw('Свечение',rg('glow',0,40))}${rw('Цвет свечения',cl('glowC'))}${rw('Градиентная рамка',tg('grad')+cl('gA')+cl('gB'))}
    ${rw('Колонок',`<select class="cp-select" onchange="setU('cols',+this.value)">${[1,2,3,4,5,6].map(n=>`<option ${U().cols==n?'selected':''}>${n}</option>`).join('')}</select>`)}${rw('Плотность',rg('dens',.6,1.6,.1))}</div><div class="sep"></div>
@@ -610,9 +612,8 @@ addEventListener('load',()=>{
 
 /* ===== v8: расположение, панель инструментов, режимы карточек, мелочи ===== */
 Object.assign(UI0,{layout:'top',tools:'collapse',toolsOpen:false,view:'list',colsM:1,galMin:150,maxw:860,gap:10,tl:1,btnS:30,pw:46,showPoster:true,showNotes:true,showChips:true,chipsWrap:false,actHover:false,showSync:true,logo:''});
-const _aui=applyUI;
-applyUI=function(){
-  _aui();const u=U(),r=document.documentElement.style,b=document.body.classList;
+function applyUiLayout(){
+  const u=U(),r=document.documentElement.style,b=document.body.classList;
   r.setProperty('--colsm',u.colsM);r.setProperty('--gal',u.galMin+'px');r.setProperty('--maxw',u.maxw+'px');r.setProperty('--gap',u.gap+'px');
   r.setProperty('--tl',u.tl);r.setProperty('--bs',u.btnS+'px');r.setProperty('--pw',u.pw+'px');r.setProperty('--ph',Math.round(u.pw*1.4)+'px');
   b.toggle('side',u.layout==='side');b.toggle('gal',u.view==='gal');b.toggle('cmp',u.view==='cmp');b.toggle('nop',!u.showPoster);b.toggle('non',!u.showNotes);
@@ -620,7 +621,8 @@ applyUI=function(){
   const lg=document.querySelector('.logo > span:not(.logo-icon)');if(lg)lg.innerHTML=u.logo?esc(u.logo):'наш <span>список</span>';
   document.title=u.logo||'Наш список';const sy=document.querySelector('.sync-row');if(sy)sy.style.display=u.showSync?'':'none';
   placeSide();
-};
+}
+function applyUI(){applyUiCore();applyUiLayout();}
 function placeSide(){
   const sb=$('sideBox'),tl=$('tools');if(!sb||!tl)return;
   const side=document.body.classList.contains('side')&&innerWidth>=1000,ct=document.querySelector('.content'),st=$('statsBar'),tb=document.querySelector('.toolbar');
@@ -630,11 +632,8 @@ function placeSide(){
 addEventListener('resize',placeSide);
 const _si=sortItems;
 sortItems=function(a){if(currentSort==='rating')return[...a].sort((x,y)=>avgR(y)-avgR(x));if(currentSort==='year')return[...a].sort((x,y)=>(+y.info?.year||0)-(+x.info?.year||0));return _si(a);};
-const _r3=render;
-render=function(){_r3();try{localStorage.setItem('wl_state',JSON.stringify({t:currentTab,f:currentFilter,s:currentSort}));}catch(e){}};
 const sl=(k,o)=>`<select class="cp-select" onchange="setU('${k}',this.value)">${o.map(([v,t])=>`<option value="${v}" ${U()[k]==v?'selected':''}>${t}</option>`).join('')}</select>`;
-const _dm=drawMore;
-drawMore=function(){_dm();
+function drawMoreLayout(){
   $('moreBody').insertAdjacentHTML('afterbegin',`<div class="cs"><div class="cs-title">Вид и расположение</div>
    ${rw('Расположение',sl('layout',[['top','Классика'],['side','Боковая панель (ПК)']]))}
    ${rw('Инструменты',sl('tools',[['collapse','Сворачиваемые (⋯)'],['show','Всегда видны']]))}
@@ -647,7 +646,8 @@ drawMore=function(){_dm();
    ${rw('Метки в несколько строк',tg('chipsWrap'))}${rw('Кнопки по наведению (ПК)',tg('actHover'))}${rw('Статус синхронизации',tg('showSync'))}
    ${rw('Название',`<input class="cp-select" style="flex:1" placeholder="наш список" value="${esc(U().logo)}" oninput="setU('logo',this.value)">`)}
    <div style="font-size:11px;color:var(--text3)">Боковая панель включается на экранах шире 1000 px: вкладки, статистика и инструменты уходят влево.</div></div><div class="sep"></div>`);
-};
+}
+function drawMore(){drawMoreMain();drawMoreLayout();}
 addEventListener('load',()=>{
   const css=document.createElement('style');
   css.textContent=`.desktop-wrap{max-width:var(--maxw,860px)!important}
