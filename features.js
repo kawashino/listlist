@@ -3,9 +3,8 @@
    внедрение интерфейса, v3 облако и постеры, v4 «хотим оба»/детали/статистика/импорт/обои,
    v5 источники постеров, v6 умное добавление/серии/франшизы/фильтры, v7 оформление/вкладки/скорость,
    v8 расположение и виды карточек.
-   Чистка кода: часть 1 (мёртвые дубли), часть 2 (цепочки обёрток свёрнуты в обычные функции).
-   Остаются одиночные обёртки над app.js/custom.js: saveCustom, applyCustom, getAllCats, renderTabs, cands, upsertItem, toggleCustom, sortItems.
-   Дальше: разнести по модулям. */
+   Чистка кода: часть 1 (мёртвые дубли), часть 2 (цепочки обёрток свёрнуты), часть 3а (обёртки над app.js/custom.js вписаны в сами функции).
+   Дальше: разнести по модулям и вынести CSS в style.css. */
 const ST={want:'🕒 Хочу',watching:'▶️ Смотрю',done:'✅ Посмотрел',dropped:'❌ Брошено',later:'⏸ Отложено'};
 const EP=['anime','series'];
 let ME=localStorage.getItem('wl_me')||'',curStatus='all';
@@ -15,12 +14,6 @@ const $=id=>document.getElementById(id);
 function ensureMe(){if(!ME){ME=(prompt('Как тебя зовут? (для оценок и пометки «кто добавил»)')||'').trim()||'Я';localStorage.setItem('wl_me',ME);}}
 
 /* ===== обёртки над app.js ===== */
-const _initApp=initApp;initApp=async function(){ensureMe();await _initApp();if($('meName'))$('meName').textContent=ME;pullTheme();setTimeout(autoRefresh,6000);setTimeout(()=>usage(true),9000);};
-const _loadAllItems=loadAllItems;loadAllItems=async function(){
-  try{await _loadAllItems();localStorage.setItem('wl_cache',JSON.stringify(items));}
-  catch(e){const c=localStorage.getItem('wl_cache');if(!c)throw e;items=JSON.parse(c);setSyncState('error','офлайн');}
-  Object.values(items).forEach(i=>SNAP[i.id]=JSON.stringify(i));
-};
 
 /* ===== карточки ===== */
 function renderList(){
@@ -230,7 +223,6 @@ async function pullTheme(){
       applyCustom();syncControls();fxSync();fxStart();renderIconPreviews();render();}
   }catch(e){}
 }
-const _sc=saveCustom;saveCustom=function(){try{_sc();}catch(e){}clearTimeout(saveCustom._t);saveCustom._t=setTimeout(pushTheme,1500);};
 
 addEventListener('load',()=>{
   const css=document.createElement('style');
@@ -359,7 +351,7 @@ const SRC={
     }return[];
   }
 };
-async function cands(q,cat){
+async function candsStd(q,cat){
   const o=cat==='anime'?['shiki','jikan','wiki']:cat==='games'?['wiki']:['itunes','wiki'],out=[];
   for(const k of o){out.push(...(await SRC[k](q,cat)).filter(x=>x.poster));if(out.length>=6)break;}
   return out;
@@ -499,7 +491,6 @@ addEventListener('mousemove',e=>{if(U().par)par((e.clientX/innerWidth-.5)*-1,(e.
 addEventListener('deviceorientation',e=>{if(U().par&&e.gamma!=null)par(-Math.max(-1,Math.min(1,e.gamma/30)),-Math.max(-1,Math.min(1,(e.beta-45)/30)));});
 function togPar(v){if(v&&window.DeviceOrientationEvent&&DeviceOrientationEvent.requestPermission)DeviceOrientationEvent.requestPermission().catch(()=>{});setU('par',v);}
 let ly=0;addEventListener('scroll',()=>{const y=scrollY,hid=U().hide&&y>ly&&y>90,h=document.querySelector('header');if(h)h.classList.toggle('hid',hid);document.body.classList.toggle('hh',hid);ly=y;},{passive:true});
-const _ac=applyCustom;applyCustom=function(){_ac();applyUI();};
 function beep(){if(U().vib&&navigator.vibrate)navigator.vibrate(12);playBeep();}
 addEventListener('keydown',e=>{
   if(/INPUT|TEXTAREA|SELECT/.test(e.target.tagName)||e.ctrlKey||e.metaKey||e.altKey)return;const k=e.key.toLowerCase();
@@ -508,13 +499,7 @@ addEventListener('keydown',e=>{
 });
 
 /* --- вкладки (54) и новые категории (78) --- */
-const _gac=getAllCats;
-getAllCats=function(){const t=C.tabs||{};return _gac().map((c,k)=>({...c,name:t[c.id]?.n||c.name,_o:t[c.id]?.o??k,_h:t[c.id]?.h})).filter(c=>!c._h).sort((a,b)=>a._o-b._o);};
-const tabsFull=()=>{const t=C.tabs||{};return _gac().map((c,k)=>({...c,name:t[c.id]?.n||c.name,_o:t[c.id]?.o??k,_h:t[c.id]?.h,_c:t[c.id]?.c})).sort((a,b)=>a._o-b._o);};
-const _rt=renderTabs;
-renderTabs=function(){const v=getAllCats();if(v.length&&!v.some(c=>c.id===currentTab))currentTab=v[0].id;_rt();
-  document.querySelectorAll('.tab').forEach(t=>{const id=t.dataset.cat,c=C.tabs?.[id]?.c||(id.startsWith('cat_')?'var(--accent)':'');
-    if(t.classList.contains('active')&&c){t.style.color=c;t.style.borderTop='2px solid '+c;}else{t.style.color='';t.style.borderTop='';}});};
+const tabsFull=()=>{const t=C.tabs||{};return baseCats().map((c,k)=>({...c,name:t[c.id]?.n||c.name,_o:t[c.id]?.o??k,_h:t[c.id]?.h,_c:t[c.id]?.c})).sort((a,b)=>a._o-b._o);};
 function tabSet(id,k,v){C.tabs=C.tabs||{};C.tabs[id]={...(C.tabs[id]||{}),[k]:v};saveCustom();renderTabs();render();drawTabsEd();}
 function tabMove(id,d){const a=tabsFull(),i=a.findIndex(c=>c.id===id),j=i+d;if(j<0||j>=a.length)return;[a[i],a[j]]=[a[j],a[i]];C.tabs=C.tabs||{};a.forEach((c,k)=>C.tabs[c.id]={...(C.tabs[c.id]||{}),o:k});saveCustom();renderTabs();drawTabsEd();}
 function drawTabsEd(){const el=$('tabsEd');if(!el)return;
@@ -523,18 +508,10 @@ function addPreset(k){const m={books:['📚','Книги'],manga:['📖','Ман
   C.customCats.push({id:'cat_'+Date.now(),name:m[1],icon:m[0],kind:k});saveCustom();renderTabs();renderCustomCatList();render();drawTabsEd();toast('Добавлена категория «'+m[1]+'»');}
 SRC.ol=async q=>{try{return((await J('https://openlibrary.org/search.json?limit=4&q='+encodeURIComponent(q))).docs||[]).filter(d=>d.cover_i).map(d=>({title:d.title,poster:`https://covers.openlibrary.org/b/id/${d.cover_i}-M.jpg`,year:d.first_publish_year||'',genres:(d.author_name||[]).slice(0,2).join(', ')}));}catch(e){return[];}};
 SRC.shikiM=async(q,k)=>{try{return(await J(`https://shikimori.one/api/${k==='ranobe'?'ranobe':'mangas'}?limit=4&search=${encodeURIComponent(q)}`)).map(x=>({title:x.russian||x.name,poster:x.image?.original?'https://shikimori.one'+x.image.original:'',year:(x.aired_on||'').slice(0,4),score:+x.score||''}));}catch(e){return[];}};
-const _cands=cands;cands=async function(q,cat){const k=(C.customCats||[]).find(c=>c.id===cat)?.kind;if(k==='books')return(await SRC.ol(q)).filter(x=>x.poster);if(k==='manga'||k==='ranobe')return(await SRC.shikiM(q,k)).filter(x=>x.poster);return _cands(q,cat);};
+async function cands(q,cat){const k=(C.customCats||[]).find(c=>c.id===cat)?.kind;if(k==='books')return(await SRC.ol(q)).filter(x=>x.poster);if(k==='manga'||k==='ranobe')return(await SRC.shikiM(q,k)).filter(x=>x.poster);return candsStd(q,cat);}
 ICON_LABELS.empty='Картинка пустого списка';
 
 /* --- безопасные сохранения (99, частично) --- */
-const SNAP={},_up=upsertItem;
-upsertItem=async function(item){
-  const old=SNAP[item.id]?JSON.parse(SNAP[item.id]):null;
-  if(!old)await _up(item);
-  else{const d={};for(const k in item)if(JSON.stringify(item[k])!==JSON.stringify(old[k]))d[k]=item[k];if(!Object.keys(d).length)return;
-    await sbFetch('/items?id=eq.'+encodeURIComponent(item.id),{method:'PATCH',body:JSON.stringify(d)});}
-  SNAP[item.id]=JSON.stringify(item);
-};
 function mergeShared(k,cur,mine){
   if(k==='wants'){const r={...(cur||{})};if(mine[ME])r[ME]=1;else delete r[ME];return r;}
   if(k==='reacts'){const r={};cur=cur||{};new Set([...Object.keys(cur),...Object.keys(mine)]).forEach(e=>{const s=new Set(cur[e]||[]);(mine[e]||[]).includes(ME)?s.add(ME):s.delete(ME);r[e]=[...s];});return r;}
@@ -588,7 +565,6 @@ function drawMoreMain(){
    <div class="cs"><div class="cs-title">Хранилище</div><div id="usage" style="font-size:12px;color:var(--text2)">—</div><button class="upload-btn" onclick="usage()">Проверить</button></div>`;
   drawTabsEd();
 }
-const _tc=toggleCustom;toggleCustom=function(){drawMore();_tc();};
 addEventListener('load',()=>{
   const css=document.createElement('style');
   css.textContent=`body.glow .item{box-shadow:0 0 var(--glow) var(--glowc),var(--card-shadow)}
@@ -630,8 +606,6 @@ function placeSide(){
   document.body.classList.toggle('sideon',side);
 }
 addEventListener('resize',placeSide);
-const _si=sortItems;
-sortItems=function(a){if(currentSort==='rating')return[...a].sort((x,y)=>avgR(y)-avgR(x));if(currentSort==='year')return[...a].sort((x,y)=>(+y.info?.year||0)-(+x.info?.year||0));return _si(a);};
 const sl=(k,o)=>`<select class="cp-select" onchange="setU('${k}',this.value)">${o.map(([v,t])=>`<option value="${v}" ${U()[k]==v?'selected':''}>${t}</option>`).join('')}</select>`;
 function drawMoreLayout(){
   $('moreBody').insertAdjacentHTML('afterbegin',`<div class="cs"><div class="cs-title">Вид и расположение</div>
