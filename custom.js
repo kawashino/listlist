@@ -46,7 +46,10 @@ function setRgbSat(v)  { C.rgb.sat=+v;   document.getElementById('rgbSatVal').te
 function setRgbLight(v){ C.rgb.light=+v;  document.getElementById('rgbLightVal').textContent=v+'%'; saveCustom(); }
 
 // ===== SAVE / LOAD =====
-function saveCustom(){ localStorage.setItem('wl_custom', JSON.stringify(C)); }
+function saveCustom(){
+  try{ localStorage.setItem('wl_custom', JSON.stringify(C)); }catch(e){}
+  clearTimeout(saveCustom._t); saveCustom._t=setTimeout(pushTheme,1500);   // копия оформления в облако
+}
 function loadCustom(){
   try{
     const s=localStorage.getItem('wl_custom');
@@ -99,6 +102,7 @@ function applyCustom(){
   // rgb reset if off
   if(!C.rgb.text)     document.querySelectorAll('.item-title').forEach(el=>el.style.color='');
   if(!C.rgb.metaText) document.querySelectorAll('.item-meta').forEach(el=>el.style.color='');
+  applyUI();
 }
 
 function applyBg(){
@@ -302,4 +306,4 @@ function switchCpTab(name){
   document.querySelectorAll('.cp-tab').forEach(t=>t.classList.toggle('active',t.dataset.tab===name));
   document.querySelectorAll('.cp-page').forEach(p=>p.classList.toggle('active',p.dataset.page===name));
 }
-function toggleCustom(){ document.getElementById('customPanel').classList.toggle('open'); document.getElementById('panelDim').classList.toggle('show'); }
+function toggleCustom(){ drawMore(); document.getElementById('customPanel').classList.toggle('open'); document.getElementById('panelDim').classList.toggle('show'); }
