@@ -606,7 +606,7 @@ const cl=k=>`<input type="color" value="${U()[k]}" oninput="setU('${k}',this.val
 function drawMore(){
   $('moreBody').innerHTML=`<div class="cs"><div class="cs-title">Карточки</div>
    ${rw('Свечение',rg('glow',0,40))}${rw('Цвет свечения',cl('glowC'))}${rw('Градиентная рамка',tg('grad')+cl('gA')+cl('gB'))}
-   ${rw('Колонок',`<select class="cp-select" onchange="setU('cols',+this.value)">${[1,2,3,4].map(n=>`<option ${U().cols==n?'selected':''}>${n}</option>`).join('')}</select>`)}${rw('Плотность',rg('dens',.6,1.6,.1))}</div><div class="sep"></div>
+   ${rw('Колонок',`<select class="cp-select" onchange="setU('cols',+this.value)">${[1,2,3,4,5,6].map(n=>`<option ${U().cols==n?'selected':''}>${n}</option>`).join('')}</select>`)}${rw('Плотность',rg('dens',.6,1.6,.1))}</div><div class="sep"></div>
    <div class="cs"><div class="cs-title">Фон</div>${rw('Параллакс',tg('par','togPar(this.checked)'))}${rw('Сила',rg('parS',5,50))}
    <div class="cr"><button class="upload-btn" onclick="$('vidFile').click()">🎬 Видео-фон (mp4/webm)</button><button class="reset-sm" onclick="setU('video','')">Убрать</button><input type="file" id="vidFile" accept="video/mp4,video/webm" onchange="loadVid(this)"></div></div><div class="sep"></div>
    <div class="cs"><div class="cs-title">Интерфейс</div>${rw('Меню внизу (телефон)',tg('nav'))}${rw('Кнопка «+» слева',tg('fabL'))}${rw('Прятать шапку при прокрутке',tg('hide'))}${rw('Вибрация',tg('vib'))}
@@ -636,4 +636,86 @@ addEventListener('load',()=>{
   const c=localStorage.getItem('wl_cache');
   if(c&&isAuthed()){try{items=JSON.parse(c);render();}catch(e){}}else $('list').innerHTML=Array(6).fill('<div class="sk"></div>').join('');
   applyUI();
+});
+
+/* ===== v8: расположение, панель инструментов, режимы карточек, мелочи ===== */
+Object.assign(UI0,{layout:'top',tools:'collapse',toolsOpen:false,view:'list',colsM:1,galMin:150,maxw:860,gap:10,tl:1,btnS:30,pw:46,showPoster:true,showNotes:true,showChips:true,chipsWrap:false,actHover:false,showSync:true,logo:''});
+const _aui=applyUI;
+applyUI=function(){
+  _aui();const u=U(),r=document.documentElement.style,b=document.body.classList;
+  r.setProperty('--colsm',u.colsM);r.setProperty('--gal',u.galMin+'px');r.setProperty('--maxw',u.maxw+'px');r.setProperty('--gap',u.gap+'px');
+  r.setProperty('--tl',u.tl);r.setProperty('--bs',u.btnS+'px');r.setProperty('--pw',u.pw+'px');r.setProperty('--ph',Math.round(u.pw*1.4)+'px');
+  b.toggle('side',u.layout==='side');b.toggle('gal',u.view==='gal');b.toggle('cmp',u.view==='cmp');b.toggle('nop',!u.showPoster);b.toggle('non',!u.showNotes);
+  b.toggle('nch',!u.showChips);b.toggle('chipsw',!!u.chipsWrap);b.toggle('acth',!!u.actHover);b.toggle('tools-open',u.tools==='show'||!!u.toolsOpen);
+  const lg=document.querySelector('.logo > span:not(.logo-icon)');if(lg)lg.innerHTML=u.logo?esc(u.logo):'наш <span>список</span>';
+  document.title=u.logo||'Наш список';const sy=document.querySelector('.sync-row');if(sy)sy.style.display=u.showSync?'':'none';
+  placeSide();
+};
+function placeSide(){
+  const sb=$('sideBox'),tl=$('tools');if(!sb||!tl)return;
+  const side=document.body.classList.contains('side')&&innerWidth>=1000,ct=document.querySelector('.content'),st=$('statsBar'),tb=document.querySelector('.toolbar');
+  if(side){sb.append(st,tl);}else if(tl.parentElement===sb){ct.insertBefore(st,tb);tb.after(tl);}
+  document.body.classList.toggle('sideon',side);
+}
+addEventListener('resize',placeSide);
+const _si=sortItems;
+sortItems=function(a){if(currentSort==='rating')return[...a].sort((x,y)=>avgR(y)-avgR(x));if(currentSort==='year')return[...a].sort((x,y)=>(+y.info?.year||0)-(+x.info?.year||0));return _si(a);};
+const _r3=render;
+render=function(){_r3();try{localStorage.setItem('wl_state',JSON.stringify({t:currentTab,f:currentFilter,s:currentSort}));}catch(e){}};
+const sl=(k,o)=>`<select class="cp-select" onchange="setU('${k}',this.value)">${o.map(([v,t])=>`<option value="${v}" ${U()[k]==v?'selected':''}>${t}</option>`).join('')}</select>`;
+const _dm=drawMore;
+drawMore=function(){_dm();
+  $('moreBody').insertAdjacentHTML('afterbegin',`<div class="cs"><div class="cs-title">Вид и расположение</div>
+   ${rw('Расположение',sl('layout',[['top','Классика'],['side','Боковая панель (ПК)']]))}
+   ${rw('Инструменты',sl('tools',[['collapse','Сворачиваемые (⋯)'],['show','Всегда видны']]))}
+   ${rw('Вид карточек',sl('view',[['list','Список'],['gal','Галерея постеров'],['cmp','Компактно']]))}
+   ${rw('Колонок на телефоне',sl('colsM',[[1,'1'],[2,'2']]))}
+   ${rw('Постер в галерее',rg('galMin',110,260,10))}${rw('Постер в списке',rg('pw',30,120,2))}
+   ${rw('Ширина страницы (ПК)',rg('maxw',700,1600,20))}${rw('Отступ карточек',rg('gap',4,24,2))}
+   ${rw('Строк в названии',rg('tl',1,3))}${rw('Размер кнопок',rg('btnS',22,42,2))}
+   ${rw('Постеры',tg('showPoster'))}${rw('Заметки',tg('showNotes'))}${rw('Метки (статус, оценки…)',tg('showChips'))}
+   ${rw('Метки в несколько строк',tg('chipsWrap'))}${rw('Кнопки по наведению (ПК)',tg('actHover'))}${rw('Статус синхронизации',tg('showSync'))}
+   ${rw('Название',`<input class="cp-select" style="flex:1" placeholder="наш список" value="${esc(U().logo)}" oninput="setU('logo',this.value)">`)}
+   <div style="font-size:11px;color:var(--text3)">Боковая панель включается на экранах шире 1000 px: вкладки, статистика и инструменты уходят влево.</div></div><div class="sep"></div>`);
+};
+addEventListener('load',()=>{
+  const css=document.createElement('style');
+  css.textContent=`.desktop-wrap{max-width:var(--maxw,860px)!important}
+  @media(min-width:700px){.fab{right:max(24px,calc(50% - var(--maxw,860px)/2 + 24px))!important}}
+  #list{grid-template-columns:repeat(var(--colsm,1),1fr)!important;gap:var(--gap,10px)!important}
+  @media(min-width:700px){#list{grid-template-columns:repeat(var(--cols,2),1fr)!important}}
+  .chips{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}.chips::-webkit-scrollbar{display:none}.chips>*{flex:none;white-space:nowrap}
+  body.chipsw .chips{flex-wrap:wrap;overflow:visible}
+  .item-title{white-space:normal!important;display:-webkit-box;-webkit-line-clamp:var(--tl,1);-webkit-box-orient:vertical;overflow:hidden}
+  .btn-icon{width:var(--bs,30px);height:var(--bs,30px)}.item .poster{width:var(--pw,46px);height:var(--ph,64px)}
+  body.nop .poster{display:none}body.non .item-meta{display:none}body.nch .chips{display:none}
+  body.cmp .chips,body.cmp .item-meta,body.cmp .poster{display:none}body.cmp .item{padding:6px 12px!important}
+  body.gal #list{grid-template-columns:repeat(auto-fill,minmax(var(--gal,150px),1fr))!important}
+  body.gal .item{flex-direction:column;align-items:stretch;padding:0!important;gap:0}
+  body.gal .item .poster{width:100%;height:auto;aspect-ratio:2/3;border-radius:0}
+  body.gal .item-body{padding:8px 10px 10px}body.gal .check{position:absolute;top:8px;left:8px;z-index:2;background:rgba(0,0,0,.5)}
+  body.gal .item-actions{position:absolute;top:8px;right:8px;z-index:2}
+  @media(hover:hover){body.acth .item-actions{opacity:0;transition:.15s}body.acth .item:hover .item-actions{opacity:1}}
+  #tools{display:none;flex-wrap:wrap;gap:6px;margin:0 0 12px}body.tools-open #tools{display:flex}#sideBox{display:none}
+  @media(min-width:1000px){
+   body.side #mainApp{display:grid!important;grid-template-columns:260px 1fr;grid-template-areas:"t b" "s b";grid-template-rows:auto 1fr;gap:0 16px;align-items:start}
+   body.side .tabs{grid-area:t;display:flex;flex-direction:column;gap:6px;background:none;border:0}
+   body.side .tab{flex-direction:row;justify-content:flex-start;border-radius:12px;border-top:0!important;padding:12px 16px}
+   body.side .tab.active{border-left:3px solid var(--accent)}
+   body.side #sideBox{grid-area:s;display:block;padding:12px;margin-top:10px;background:var(--bg2);border-radius:12px;position:sticky;top:16px}
+   body.side .body-wrap{grid-area:b;border-radius:16px!important}
+   body.sideon #tools{display:flex!important;flex-direction:column;align-items:stretch;margin:10px 0 0}body.sideon #tools>*{width:100%}body.sideon #toolsBtn{display:none}
+  }`;
+  document.head.appendChild(css);
+  $('tabsNav').insertAdjacentHTML('afterend','<div id="sideBox"></div>');
+  const tb=document.querySelector('.toolbar'),tl=document.createElement('div');tl.id='tools';tb.after(tl);
+  [...tb.children].forEach(el=>{if(el.classList.contains('filter-row')||el.id==='fltBtn'||(el.getAttribute('onclick')||'').includes('roulette()'))return;tl.append(el);});
+  tl.insertAdjacentHTML('beforeend','<button class="filter-btn" onclick="loadAllItems().then(render)">🔄 Обновить</button>');
+  tb.insertAdjacentHTML('beforeend','<button class="filter-btn" id="toolsBtn" onclick="setU(\'toolsOpen\',!U().toolsOpen)">⋯</button>');
+  $('sortSelect').insertAdjacentHTML('beforeend','<option value="rating">⭐ По оценке</option><option value="year">📆 По году</option>');
+  try{const st=JSON.parse(localStorage.getItem('wl_state')||'{}');
+    if(st.t)currentTab=st.t;
+    if(st.f){currentFilter=st.f;document.querySelectorAll('.filter-row .filter-btn').forEach(b=>b.classList.toggle('active',(b.getAttribute('onclick')||'').includes("'"+st.f+"'")));}
+    if(st.s){currentSort=st.s;$('sortSelect').value=st.s;}}catch(e){}
+  applyUI();render();
 });
