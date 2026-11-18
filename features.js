@@ -1,4 +1,9 @@
-/* features.js: статусы, оценки, постеры, рулетка, темы, эффекты, PWA */
+/* features.js: надстройка над app.js и custom.js, подключается последней.
+   Разделы по порядку: обёртки над app.js, карточки, форма, рулетка, темы, эффекты, PWA и бэкап,
+   внедрение интерфейса, v3 облако и постеры, v4 «хотим оба»/детали/статистика/импорт/обои,
+   v5 источники постеров, v6 умное добавление/серии/франшизы/фильтры, v7 оформление/вкладки/скорость,
+   v8 расположение и виды карточек.
+   Чистка кода: часть 1 (мёртвые дубли удалены). Дальше: свернуть цепочки обёрток, разнести по модулям. */
 const ST={want:'🕒 Хочу',watching:'▶️ Смотрю',done:'✅ Посмотрел',dropped:'❌ Брошено',later:'⏸ Отложено'};
 const EP=['anime','series'];
 let ME=localStorage.getItem('wl_me')||'',curStatus='all';
@@ -49,7 +54,6 @@ function render(){
 async function setStatus(id,st){const i=items[id];if(!i)return;items[id]={...i,status:st,done:st==='done'};render();beep();try{await upsertItem(items[id]);}catch(e){setSyncState('error','ошибка');}}
 async function toggleDone(id){const i=items[id];if(i)setStatus(id,sOf(i)==='done'?'want':'done');}
 function cycleStatus(id){const k=Object.keys(ST);setStatus(id,k[(k.indexOf(sOf(items[id]))+1)%k.length]);}
-async function bump(id){const i=items[id];items[id]={...i,episode:(i.episode||0)+1};render();beep();try{await upsertItem(items[id]);}catch(e){}}
 
 /* ===== форма ===== */
 function fillForm(i){
@@ -89,14 +93,6 @@ function toast(msg,undo){
 }
 
 /* ===== рулетка ===== */
-function roulette(){
-  const all=$('rouAll').checked,t=$('rouTitle');
-  const pool=Object.values(items).filter(i=>sOf(i)==='want'&&(all||i.cat===currentTab));
-  $('rou').classList.add('open');t.classList.remove('win');
-  if(!pool.length){t.textContent='В «Хочу» пусто';return;}
-  let n=0;clearInterval(roulette._t);
-  roulette._t=setInterval(()=>{t.textContent=pool[Math.floor(Math.random()*pool.length)].title;if(++n>22){clearInterval(roulette._t);t.classList.add('win');beep();}},90);
-}
 
 /* ===== темы ===== */
 const THEMES={
@@ -202,20 +198,6 @@ addEventListener('load',()=>{
 });
 
 /* ===== v3: облако (Storage + settings), постеры TMDB/RAWG, прокрутка вкладок ===== */
-const KEY=k=>localStorage.getItem('wl_'+k)||'';
-async function findPoster(q,cat){
-  try{
-    if(cat==='anime'){const d=await(await fetch('https://api.jikan.moe/v4/anime?limit=1&q='+encodeURIComponent(q))).json();return d.data?.[0]?.images?.jpg?.image_url||'';}
-    if((cat==='films'||cat==='series')&&KEY('tmdb')){const d=await(await fetch(`https://api.themoviedb.org/3/search/multi?api_key=${KEY('tmdb')}&language=ru-RU&query=${encodeURIComponent(q)}`)).json();const r=(d.results||[]).find(x=>x.poster_path);return r?'https://image.tmdb.org/t/p/w300'+r.poster_path:'';}
-    if(cat==='games'&&KEY('rawg')){const d=await(await fetch(`https://api.rawg.io/api/games?key=${KEY('rawg')}&page_size=1&search=${encodeURIComponent(q)}`)).json();return d.results?.[0]?.background_image||'';}
-  }catch(e){}
-  return '';
-}
-async function fillPosters(){
-  const todo=Object.values(items).filter(i=>!i.poster);let n=0,ok=0;toast('Ищу постеры…');
-  for(const i of todo){const p=await findPoster(i.title,i.cat);n++;if(p){items[i.id]={...i,poster:p};ok++;try{await upsertItem(items[i.id]);}catch(e){}}if(n%5==0)render();await new Promise(r=>setTimeout(r,400));}
-  render();toast(`Готово: найдено ${ok} из ${n}`);
-}
 async function upload(f,kind){
   const path=`${kind}/${(ME||'x').replace(/\W/g,'')}-${Date.now()}.${(f.name.split('.').pop()||'bin').toLowerCase()}`;
   const r=await fetch(`${SUPA_URL}/storage/v1/object/media/${path}`,{method:'POST',headers:{apikey:SUPA_KEY,Authorization:`Bearer ${SUPA_KEY}`,'Content-Type':f.type||'application/octet-stream','x-upsert':'true'},body:f});
@@ -263,21 +245,9 @@ let curColl='all',infoId=null;
 function updColl(){const s=$('collSel');if(!s)return;const cs=[...new Set(Object.values(items).filter(i=>i.cat===currentTab&&i.coll).map(i=>i.coll))];
   const h='<option value="all">Все коллекции</option>'+cs.map(c=>`<option>${esc(c)}</option>`).join('');if(s.dataset.h!==h){s.innerHTML=h;s.dataset.h=h;}
   if(!cs.includes(curColl))curColl='all';s.value=curColl;}
-function patch(id,o){items[id]={...items[id],...o};render();if(infoId===id&&$('info').classList.contains('open'))drawInfo();upsertItem(items[id]).catch(()=>setSyncState('error','ошибка'));}
 function toggleWant(id){const w={...(items[id].wants||{})};if(w[ME])delete w[ME];else w[ME]=1;beep();patch(id,{wants:w});}
 function react(id,e){const r={...(items[id].reacts||{})},n=[...(r[e]||[])],k=n.indexOf(ME);if(k<0)n.push(ME);else n.splice(k,1);r[e]=n;patch(id,{reacts:r});}
 function addCmt(){const t=$('cmt').value.trim();if(!t)return;patch(infoId,{comments:[...(items[infoId].comments||[]),{by:ME,text:t,ts:Date.now()}]});}
-async function findInfo(i){
-  const q=encodeURIComponent(i.title);
-  try{
-    if(i.cat==='anime'){const x=(await(await fetch('https://api.jikan.moe/v4/anime?limit=1&q='+q)).json()).data?.[0];if(x)return{ts:1,year:x.year||'',genres:(x.genres||[]).map(g=>g.name).join(', '),desc:x.synopsis||'',score:x.score||'',eps:x.episodes||0,trailer:x.trailer?.embed_url||'',poster:x.images?.jpg?.image_url||''};}
-    if((i.cat==='films'||i.cat==='series')&&KEY('tmdb')){const k=KEY('tmdb'),r=((await(await fetch(`https://api.themoviedb.org/3/search/multi?api_key=${k}&language=ru-RU&query=${q}`)).json()).results||[]).find(x=>x.media_type!=='person');
-      if(r){const v=((await(await fetch(`https://api.themoviedb.org/3/${r.media_type}/${r.id}/videos?api_key=${k}`)).json()).results||[]).find(x=>x.site==='YouTube');
-        return{ts:1,year:(r.release_date||r.first_air_date||'').slice(0,4),desc:r.overview||'',score:r.vote_average?+r.vote_average.toFixed(1):'',trailer:v?'https://www.youtube.com/embed/'+v.key:'',poster:r.poster_path?'https://image.tmdb.org/t/p/w300'+r.poster_path:''};}}
-    if(i.cat==='games'&&KEY('rawg')){const x=(await(await fetch(`https://api.rawg.io/api/games?key=${KEY('rawg')}&page_size=1&search=${q}`)).json()).results?.[0];if(x)return{ts:1,year:(x.released||'').slice(0,4),genres:(x.genres||[]).map(g=>g.name).join(', '),score:x.rating||'',poster:x.background_image||''};}
-  }catch(e){}
-  return{ts:1};
-}
 async function openInfo(id){
   const i=items[id];if(!i)return;infoId=id;$('info').classList.add('open');drawInfo();
   if(!i.info||!i.info.ts||(!i.info.poster&&!i.poster)){const inf=await findInfo(i),c=items[id];if(c)patch(id,{info:inf,poster:c.poster||inf.poster||'',total:c.total||inf.eps||0});}
