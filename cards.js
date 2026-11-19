@@ -16,7 +16,7 @@ function renderList(){
   const ic=C.icons||{};
   lastTotal=arr.length;arr=arr.slice(0,shown);list.innerHTML=arr.map(i=>{
     const st=sOf(i),rs=Object.entries(i.ratings||{}).filter(([,v])=>v>0).map(([k,v])=>esc(k)+' '+v).join(' · ');
-    const prog=(st==='watching'&&EP.includes(i.cat))?`<span>S${i.season||1} · ${i.episode||0}${i.total?'/'+i.total:''}<button class="pp" onclick="bump('${i.id}')">+1</button></span>`:'';
+    const prog=(st==='watching'&&EP.includes(i.cat))?`<span>${i.cat==='manga'?'гл. ':'S'+(i.season||1)+' · '}${i.episode||0}${i.total?'/'+i.total:''}<button class="pp" onclick="bump('${i.id}')">+1</button></span>`:'';
     const tags=(i.tags||'').split(',').map(t=>t.trim()).filter(Boolean).map(t=>`<span class="tg">${esc(t)}</span>`).join('');
     const w=Object.keys(i.wants||{});return `<div class="item st-${st}${w.length>1?' both':''}">
       ${i.poster?`<img class="poster" loading="lazy" src="${esc(i.poster)}" onerror="this.remove()">`:''}
@@ -138,4 +138,15 @@ function render(){
   lastTotal=0;renderList();
   if(lastTotal>shown){$('list').insertAdjacentHTML('beforeend',`<div id="more" class="stb" style="grid-column:1/-1;text-align:center;padding:12px;cursor:pointer" onclick="shown+=60;render()">Показать ещё (${lastTotal-shown})</div>`);io.observe($('more'));}
   try{localStorage.setItem('wl_state',JSON.stringify({t:currentTab,f:currentFilter,s:currentSort}));}catch(e){}
+}
+
+/* Встроенная вкладка «Манга» есть у всех. Карточки из старой личной категории (она жила только на одном устройстве) переносим в неё. */
+async function migrateManga(){
+  const ids=(C.customCats||[]).filter(c=>c.kind==='manga'||c.name==='Манга').map(c=>c.id);
+  if(!ids.length)return;
+  let n=0;
+  for(const i of Object.values(items))if(ids.includes(i.cat)){items[i.id]={...i,cat:'manga'};n++;try{await upsertItem(items[i.id]);}catch(e){}}
+  C.customCats=C.customCats.filter(c=>!ids.includes(c.id));
+  for(const id of ids){if(C.tabs&&C.tabs[id]){C.tabs.manga=C.tabs.manga||C.tabs[id];delete C.tabs[id];}if(C.icons&&C.icons[id]&&!C.icons.manga)C.icons.manga=C.icons[id];if(currentTab===id)currentTab='manga';}
+  saveCustom();renderTabs();render();renderCustomCatList();renderIconPreviews();if(n)toast('Манга перенесена во встроенную вкладку: '+n);
 }
