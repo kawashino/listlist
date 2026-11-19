@@ -71,4 +71,4 @@ document.addEventListener('visibilitychange',()=>{const v=$('bgVid');if(v)docume
 
 async function loadVid(inp){const f=inp.files[0];if(!f)return;if(f.size>48e6){toast('Видео больше 48 МБ, лимит хранилища на файл 50 МБ');return;}toast('Загружаю видео…');try{setU('video',await upload(f,'video'));toast('Видео-фон установлен');}catch(e){toast('Не вышло загрузить видео');}}
 
-ICON_LABELS.empty='Картинка пустого списка';
+ICON_LABELS.empty='Картинка пустого списка';ICON_LABELS.manga='Вкладка Манга';ICON_DEFS.manga='📖';
