@@ -63,7 +63,7 @@ function drawMoreMain(){
   drawTabsEd();
 }
 
-Object.assign(UI0,{layout:'top',tools:'collapse',toolsOpen:false,view:'list',colsM:1,galMin:150,maxw:860,gap:10,tl:1,btnS:30,pw:46,showPoster:true,showNotes:true,showChips:true,chipsWrap:false,actHover:false,showSync:true,logo:''});
+Object.assign(UI0,{layout:'top',tools:'collapse',toolsOpen:false,view:'list',colsM:1,galMin:150,maxw:860,gap:10,tl:1,btnS:30,pw:46,showPoster:true,showNotes:true,showChips:true,chipsWrap:false,actHover:false,showSync:true,logo:'',posterColor:true});
 
 function applyUiLayout(){
   const u=U(),r=document.documentElement.style,b=document.body.classList;
@@ -99,7 +99,7 @@ function drawMoreLayout(){
    ${rw('Ширина страницы (ПК)',rg('maxw',700,1600,20))}${rw('Отступ карточек',rg('gap',4,24,2))}
    ${rw('Строк в названии',rg('tl',1,3))}${rw('Размер кнопок',rg('btnS',22,42,2))}
    ${rw('Постеры',tg('showPoster'))}${rw('Заметки',tg('showNotes'))}${rw('Метки (статус, оценки…)',tg('showChips'))}
-   ${rw('Метки в несколько строк',tg('chipsWrap'))}${rw('Кнопки по наведению (ПК)',tg('actHover'))}${rw('Статус синхронизации',tg('showSync'))}
+   ${rw('Метки в несколько строк',tg('chipsWrap'))}${rw('Кнопки по наведению (ПК)',tg('actHover'))}${rw('Статус синхронизации',tg('showSync'))}${rw('Цвета из постера (карточка)',tg('posterColor'))}
    ${rw('Название',`<input class="cp-select" style="flex:1" placeholder="наш список" value="${esc(U().logo)}" oninput="setU('logo',this.value)">`)}
    <div style="font-size:11px;color:var(--text3)">Боковая панель включается на экранах шире 1000 px: вкладки, статистика и инструменты уходят влево.</div></div><div class="sep"></div>`);
 }
