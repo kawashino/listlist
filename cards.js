@@ -48,7 +48,7 @@ function fillForm(i){
   $('overlay').classList.add('open');setTimeout(()=>$('inputTitle').focus(),80);
 }
 
-function openModal(){editingId=null;fillForm({});}
+function openModal(){editingId=null;fillForm({});pasteLink(true);}
 
 function editItem(id){const i=items[id];if(!i)return;editingId=id;fillForm(i);}
 
@@ -79,7 +79,12 @@ function updColl(){const s=$('collSel');if(!s)return;const cs=[...new Set(Object
   const h='<option value="all">Все коллекции</option>'+cs.map(c=>`<option>${esc(c)}</option>`).join('');if(s.dataset.h!==h){s.innerHTML=h;s.dataset.h=h;}
   if(!cs.includes(curColl))curColl='all';s.value=curColl;}
 
-function toggleWant(id){const w={...(items[id].wants||{})};if(w[ME])delete w[ME];else w[ME]=1;beep();patch(id,{wants:w});}
+function toggleWant(id){
+  const i=items[id];if(!i)return;const w={...(i.wants||{})},had=!!w[ME];if(had)delete w[ME];else w[ME]=1;beep();
+  if(!extrasOn){patch(id,{wants:w});return;}
+  items[id]={...i,wants:w};render();if(infoId===id&&$('info').classList.contains('open'))drawInfo();
+  (had?xtDel('item_wants',`item_id=eq.${encodeURIComponent(id)}&author=eq.${encodeURIComponent(ME)}`):xtAdd('item_wants',{item_id:id,author:ME})).catch(()=>setSyncState('error','ошибка'));
+}
 
 let _pick=null,sugT,curFr='all',SF={};
 
@@ -94,7 +99,6 @@ function updFr(){const s=$('frSel');if(!s)return;const fs=[...new Set(Object.val
 
 function bump(id){const i=items[id],S=i.season||1,seen={...(i.seen||{})},a=new Set(seen[S]||[]),n=(i.episode||0)+1;a.add(n);seen[S]=[...a].sort((x,y)=>x-y);patch(id,{episode:n,seen});beep();}
 
-const avgR=i=>{const r=Object.values(i.ratings||{}).filter(v=>v>0);return r.length?r.reduce((a,b)=>a+b,0)/r.length:(+i.info?.score||0);};
 
 function smartOk(i){
   const f=SF,y=+i.info?.year||0;
