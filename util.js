@@ -2,7 +2,7 @@
 
 const ST={want:'🕒 Хочу',watching:'▶️ Смотрю',done:'✅ Посмотрел',dropped:'❌ Брошено',later:'⏸ Отложено'};
 
-const EP=['anime','series'];
+const EP=['anime','series','manga'];
 
 let ME=localStorage.getItem('wl_me')||'',curStatus='all';
 
