@@ -85,6 +85,8 @@ async function loadAllItems() {
     const rows = await Promise.race([sbFetch('/items?select=*&order=ts.desc'), new Promise((_, no) => setTimeout(() => no(new Error('сервер не отвечает')), 12000))]);
     items = {};
     (rows || []).forEach(r => { items[r.id] = r; });
+    await loadExtras();
+    STAT.fetch = Date.now();
     localStorage.setItem('wl_cache', JSON.stringify(items));
   } catch(e) {
     const c = localStorage.getItem('wl_cache');   // нет сети: показываем последний сохранённый список
@@ -97,20 +99,22 @@ async function loadAllItems() {
 
 async function upsertItem(item) {
   lastLocalWrite = Date.now();
+  let body = item;
+  if (extrasOn) { body = { ...item }; XKEYS.forEach(k => delete body[k]); }   // эти поля живут в своих таблицах
   const old = SNAP[item.id] ? JSON.parse(SNAP[item.id]) : null;
   if (!old) {
     await sbFetch('/items', {
       method: 'POST',
       headers: { 'Prefer': 'resolution=merge-duplicates' },
-      body: JSON.stringify(item)
+      body: JSON.stringify(body)
     });
   } else {
     const d = {};
-    for (const k in item) if (JSON.stringify(item[k]) !== JSON.stringify(old[k])) d[k] = item[k];
+    for (const k in body) if (JSON.stringify(body[k]) !== JSON.stringify(old[k])) d[k] = body[k];
     if (!Object.keys(d).length) return;
     await sbFetch('/items?id=eq.' + encodeURIComponent(item.id), { method: 'PATCH', body: JSON.stringify(d) });
   }
-  SNAP[item.id] = JSON.stringify(item);
+  SNAP[item.id] = JSON.stringify(body);
 }
 
 async function deleteItemDb(id) {
@@ -118,11 +122,42 @@ async function deleteItemDb(id) {
   await sbFetch(`/items?id=eq.${encodeURIComponent(id)}`, { method: 'DELETE' });
 }
 
+// ===== ШИНА СОБЫТИЙ: ядро ничего не знает о модулях, модули подписываются в main.js =====
+const Hooks = {};
+function on(name, fn) { (Hooks[name] = Hooks[name] || []).push(fn); }
+function emit(name, ...a) { (Hooks[name] || []).forEach(f => f(...a)); }
+const avgR=i=>{const r=Object.values(i.ratings||{}).filter(v=>v>0);return r.length?r.reduce((a,b)=>a+b,0)/r.length:(+i.info?.score||0);};
+const STAT = { fetch: 0, rt: 'нет', rtAt: 0 };   // для экрана «Состояние»
+
+// ===== КОММЕНТАРИИ, РЕАКЦИИ, «ХОЧУ»: отдельные таблицы, каждая запись независима, поэтому правки двоих не затирают друг друга =====
+let extrasOn = false;                              // true, когда таблицы item_wants / item_reacts / item_comments созданы
+const XKEYS = ['wants', 'reacts', 'comments'];
+const XTABLES = ['items', 'item_wants', 'item_reacts', 'item_comments'];
+async function xtAdd(table, row) { await sbFetch('/' + table, { method: 'POST', headers: { Prefer: 'resolution=ignore-duplicates' }, body: JSON.stringify(row) }); }
+async function xtDel(table, q) { await sbFetch('/' + table + '?' + q, { method: 'DELETE' }); }
+async function loadExtras() {
+  try {
+    const [w, r, c] = await Promise.all([sbFetch('/item_wants?select=*'), sbFetch('/item_reacts?select=*'), sbFetch('/item_comments?select=*&order=ts.asc')]);
+    extrasOn = true;
+    Object.values(items).forEach(i => { i.wants = {}; i.reacts = {}; i.comments = []; });
+    (w || []).forEach(x => { const i = items[x.item_id]; if (i) i.wants[x.author] = 1; });
+    (r || []).forEach(x => { const i = items[x.item_id]; if (i) (i.reacts[x.emoji] = i.reacts[x.emoji] || []).push(x.author); });
+    (c || []).forEach(x => { const i = items[x.item_id]; if (i) i.comments.push({ by: x.author, text: x.body, ts: x.ts, id: x.id }); });
+  } catch (e) { extrasOn = false; }                // таблиц ещё нет: работаем по-старому
+}
+function applyRemoteExtra(table, type, rec, old) {
+  const r = (type === 'DELETE' ? old : rec) || {}, i = items[r.item_id]; if (!i) return;
+  if (table === 'item_wants') { i.wants = { ...(i.wants || {}) }; if (type === 'DELETE') delete i.wants[r.author]; else i.wants[r.author] = 1; }
+  else if (table === 'item_reacts') { i.reacts = { ...(i.reacts || {}) }; const a = new Set(i.reacts[r.emoji] || []); if (type === 'DELETE') a.delete(r.author); else a.add(r.author); i.reacts[r.emoji] = [...a]; }
+  else if (table === 'item_comments') { i.comments = (i.comments || []).filter(c => c.id !== r.id); if (type !== 'DELETE') i.comments.push({ by: r.author, text: r.body, ts: r.ts, id: r.id }); i.comments.sort((a, b) => a.ts - b.ts); }
+  render();
+}
+
 // ===== REALTIME (протокол Supabase Realtime v2) + запасной опрос =====
 let lastLocalWrite = 0, rtTimer = null;
 function applyRemote(type, rec, old) {
   if (type === 'DELETE') { const id = (old && old.id) || (rec && rec.id); if (id) { delete items[id]; delete SNAP[id]; } }
-  else if (rec && rec.id) { items[rec.id] = rec; SNAP[rec.id] = JSON.stringify(rec); }
+  else if (rec && rec.id) { const p = items[rec.id] || {}; items[rec.id] = extrasOn ? { ...rec, wants: p.wants || {}, reacts: p.reacts || {}, comments: p.comments || [] } : rec; SNAP[rec.id] = JSON.stringify(rec); }
   render();
 }
 function startRealtime() {
@@ -130,7 +165,7 @@ function startRealtime() {
   const ws = new WebSocket(SUPA_URL.replace('https://', 'wss://') + '/realtime/v1/websocket?apikey=' + SUPA_KEY + '&vsn=1.0.0');
   ws.onopen = () => {
     ws.send(JSON.stringify({ topic: 'realtime:items-sync', event: 'phx_join', ref: '1', join_ref: '1',
-      payload: { config: { broadcast: { ack: false, self: false }, presence: { key: '' }, postgres_changes: [{ event: '*', schema: 'public', table: 'items' }], private: false }, access_token: SUPA_KEY } }));
+      payload: { config: { broadcast: { ack: false, self: false }, presence: { key: '' }, postgres_changes: XTABLES.map(t => ({ event: '*', schema: 'public', table: t })), private: false }, access_token: SUPA_KEY } }));
     clearInterval(rtTimer);
     rtTimer = setInterval(() => { if (ws.readyState === 1) ws.send(JSON.stringify({ topic: 'phoenix', event: 'heartbeat', payload: {}, ref: String(Date.now()) })); }, 25000);
   };
@@ -138,15 +173,16 @@ function startRealtime() {
     try {
       const m = JSON.parse(e.data);
       if (m.event === 'phx_reply' && m.topic === 'realtime:items-sync') {
-        if (m.payload && m.payload.status === 'ok') setSyncState('live', 'онлайн');
+        if (m.payload && m.payload.status === 'ok') { STAT.rt = 'подключено'; setSyncState('live', 'онлайн'); }
         else setSyncState('error', 'realtime: ' + ((m.payload && m.payload.response && m.payload.response.reason) || 'ошибка'));
       } else if (m.event === 'postgres_changes') {
-        const d = m.payload && m.payload.data; if (d) applyRemote(d.type, d.record, d.old_record);
+        const d = m.payload && m.payload.data;
+        if (d) { STAT.rtAt = Date.now(); if (d.table && d.table !== 'items') applyRemoteExtra(d.table, d.type, d.record, d.old_record); else applyRemote(d.type, d.record, d.old_record); }
       }
     } catch (err) {}
   };
-  ws.onerror = () => setSyncState('error', 'ошибка соединения');
-  ws.onclose = () => { realtimeChannel = null; clearInterval(rtTimer); setTimeout(startRealtime, 3000); };
+  ws.onerror = () => { STAT.rt = 'ошибка'; setSyncState('error', 'ошибка соединения'); };
+  ws.onclose = () => { STAT.rt = 'переподключение'; realtimeChannel = null; clearInterval(rtTimer); setTimeout(startRealtime, 3000); };
   realtimeChannel = ws;
 }
 // Запасной путь, если realtime не включён или соединение молчит: обновляем список по таймеру и при возврате на вкладку.
@@ -155,6 +191,7 @@ async function refreshItems() {
   try {
     const rows = await sbFetch('/items?select=*&order=ts.desc');
     items = {}; (rows || []).forEach(r => { items[r.id] = r; SNAP[r.id] = JSON.stringify(r); });
+    await loadExtras(); STAT.fetch = Date.now();
     try { localStorage.setItem('wl_cache', JSON.stringify(items)); } catch (e) {}
     render();
   } catch (e) {}
@@ -180,7 +217,7 @@ window.addEventListener('load', () => {
 });
 
 async function initApp() {
-  ensureMe();
+  emit('beforeInit');
   setSyncState('loading', 'подключение...');
   try {
     await loadAllItems();
@@ -188,17 +225,14 @@ async function initApp() {
     setSyncState('live', 'онлайн');
     showMain();
     startRealtime();
-    migrateManga();
+    emit('itemsLoaded');
   } catch(e) {
     setSyncState('error', 'ошибка');
     document.getElementById('setupScreen').classList.add('visible');
     document.getElementById('mainApp').style.display = 'none';
     showSetupError('Ошибка подключения: ' + e.message);
   }
-  if (document.getElementById('meName')) document.getElementById('meName').textContent = ME;
-  pullTheme();                          // оформление из облака
-  setTimeout(autoRefresh, 6000);        // фоновое обновление данных карточек
-  setTimeout(() => usage(true), 9000);  // предупреждение о заполнении хранилища
+  emit('afterInit');
 }
 
 function authedNow() { return typeof isAuthed === 'function' && isAuthed() && document.getElementById('mainWrapper') && document.getElementById('mainWrapper').style.display !== 'none'; }
