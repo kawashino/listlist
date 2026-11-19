@@ -5,7 +5,7 @@ const SUPA_KEY = 'sb_publishable_XvUI2M2jmfixsE3d_ikJZQ_DXp5WyKY';
 // ===== ЗАЩИТА ВХОДОМ (пароль хранится только как хеш) =====
 const PW_SALT = 'wl-a00e84dea84412e4';
 const PW_ITER = 150000;
-const PW_HASH = '1ba1c8fa0387cfc44eea7169dd568f015103279dc32a45c2526acec241e06aad';
+const PW_HASH = 'b744f4673664c275b9eaf52829955082f55b632da1229f7df910678775e06c38';
 // Новый пароль: открой makehash.html, введи пароль и вставь полученный хеш в PW_HASH
 // =========================================================
 
@@ -82,7 +82,7 @@ async function sbFetch(path, opts = {}) {
 const SNAP = {};  // последнее известное серверное состояние карточек: в базу уходят только изменённые поля
 async function loadAllItems() {
   try {
-    const rows = await sbFetch('/items?select=*&order=ts.desc');
+    const rows = await Promise.race([sbFetch('/items?select=*&order=ts.desc'), new Promise((_, no) => setTimeout(() => no(new Error('сервер не отвечает')), 12000))]);
     items = {};
     (rows || []).forEach(r => { items[r.id] = r; });
     localStorage.setItem('wl_cache', JSON.stringify(items));
@@ -96,6 +96,7 @@ async function loadAllItems() {
 }
 
 async function upsertItem(item) {
+  lastLocalWrite = Date.now();
   const old = SNAP[item.id] ? JSON.parse(SNAP[item.id]) : null;
   if (!old) {
     await sbFetch('/items', {
@@ -113,32 +114,54 @@ async function upsertItem(item) {
 }
 
 async function deleteItemDb(id) {
+  lastLocalWrite = Date.now();
   await sbFetch(`/items?id=eq.${encodeURIComponent(id)}`, { method: 'DELETE' });
 }
 
-// ===== REALTIME =====
+// ===== REALTIME (протокол Supabase Realtime v2) + запасной опрос =====
+let lastLocalWrite = 0, rtTimer = null;
+function applyRemote(type, rec, old) {
+  if (type === 'DELETE') { const id = (old && old.id) || (rec && rec.id); if (id) { delete items[id]; delete SNAP[id]; } }
+  else if (rec && rec.id) { items[rec.id] = rec; SNAP[rec.id] = JSON.stringify(rec); }
+  render();
+}
 function startRealtime() {
   if (realtimeChannel) return;
-  const wsUrl = SUPA_URL.replace('https://', 'wss://') + '/realtime/v1/websocket?apikey=' + SUPA_KEY + '&vsn=1.0.0';
-  const ws = new WebSocket(wsUrl);
-
+  const ws = new WebSocket(SUPA_URL.replace('https://', 'wss://') + '/realtime/v1/websocket?apikey=' + SUPA_KEY + '&vsn=1.0.0');
   ws.onopen = () => {
-    ws.send(JSON.stringify({ topic: 'realtime:public:items', event: 'phx_join', payload: {}, ref: '1' }));
-    setSyncState('live', 'онлайн');
+    ws.send(JSON.stringify({ topic: 'realtime:items-sync', event: 'phx_join', ref: '1', join_ref: '1',
+      payload: { config: { broadcast: { ack: false, self: false }, presence: { key: '' }, postgres_changes: [{ event: '*', schema: 'public', table: 'items' }], private: false }, access_token: SUPA_KEY } }));
+    clearInterval(rtTimer);
+    rtTimer = setInterval(() => { if (ws.readyState === 1) ws.send(JSON.stringify({ topic: 'phoenix', event: 'heartbeat', payload: {}, ref: String(Date.now()) })); }, 25000);
   };
   ws.onmessage = (e) => {
     try {
-      const msg = JSON.parse(e.data);
-      if (['INSERT','UPDATE'].includes(msg.payload?.type)) { const r = msg.payload.record; if(r){items[r.id]=r;render();} }
-      if (msg.payload?.type === 'DELETE') { const o = msg.payload.old_record; if(o?.id){delete items[o.id];render();} }
-      if (msg.event === 'heartbeat') ws.send(JSON.stringify({topic:'phoenix',event:'heartbeat',payload:{},ref:null}));
-    } catch(e) {}
+      const m = JSON.parse(e.data);
+      if (m.event === 'phx_reply' && m.topic === 'realtime:items-sync') {
+        if (m.payload && m.payload.status === 'ok') setSyncState('live', 'онлайн');
+        else setSyncState('error', 'realtime: ' + ((m.payload && m.payload.response && m.payload.response.reason) || 'ошибка'));
+      } else if (m.event === 'postgres_changes') {
+        const d = m.payload && m.payload.data; if (d) applyRemote(d.type, d.record, d.old_record);
+      }
+    } catch (err) {}
   };
-  ws.onerror = () => setSyncState('error', 'ошибка');
-  ws.onclose = () => { setSyncState('error', 'переподключение...'); realtimeChannel=null; setTimeout(startRealtime,3000); };
+  ws.onerror = () => setSyncState('error', 'ошибка соединения');
+  ws.onclose = () => { realtimeChannel = null; clearInterval(rtTimer); setTimeout(startRealtime, 3000); };
   realtimeChannel = ws;
-  setInterval(() => { if(ws.readyState===1) ws.send(JSON.stringify({topic:'phoenix',event:'heartbeat',payload:{},ref:null})); }, 25000);
 }
+// Запасной путь, если realtime не включён или соединение молчит: обновляем список по таймеру и при возврате на вкладку.
+async function refreshItems() {
+  if (Date.now() - lastLocalWrite < 5000) return;   // не затираем только что сделанные правки
+  try {
+    const rows = await sbFetch('/items?select=*&order=ts.desc');
+    items = {}; (rows || []).forEach(r => { items[r.id] = r; SNAP[r.id] = JSON.stringify(r); });
+    try { localStorage.setItem('wl_cache', JSON.stringify(items)); } catch (e) {}
+    render();
+  } catch (e) {}
+}
+setInterval(() => { if (!document.hidden && typeof authedNow === 'function' && authedNow()) refreshItems(); }, 30000);
+document.addEventListener('visibilitychange', () => { if (!document.hidden && typeof authedNow === 'function' && authedNow()) refreshItems(); });
+addEventListener('online', () => { if (typeof authedNow === 'function' && authedNow()) refreshItems(); });
 
 // ===== INIT =====
 window.addEventListener('load', () => {
@@ -165,6 +188,7 @@ async function initApp() {
     setSyncState('live', 'онлайн');
     showMain();
     startRealtime();
+    migrateManga();
   } catch(e) {
     setSyncState('error', 'ошибка');
     document.getElementById('setupScreen').classList.add('visible');
@@ -177,6 +201,7 @@ async function initApp() {
   setTimeout(() => usage(true), 9000);  // предупреждение о заполнении хранилища
 }
 
+function authedNow() { return typeof isAuthed === 'function' && isAuthed() && document.getElementById('mainWrapper') && document.getElementById('mainWrapper').style.display !== 'none'; }
 function showMain() { document.getElementById('setupScreen').classList.remove('visible'); document.getElementById('mainApp').style.display='flex'; }
 function resetSettings() { if(!confirm('Выйти из приложения?'))return; sessionStorage.removeItem('wl_auth'); localStorage.removeItem('wl_auth'); location.reload(); }
 function connectBin() { location.reload(); }
@@ -186,7 +211,7 @@ function setSyncState(s,l) { const d=document.getElementById('syncDot'),lb=docum
 
 // ===== TABS =====
 function baseCats() {
-  return [{id:'anime',name:'Аниме',icon:'🎌'},{id:'games',name:'Игры',icon:'🎮'},{id:'series',name:'Сериалы',icon:'📺'},{id:'films',name:'Фильмы',icon:'🎬'},...(C.customCats||[])];
+  return [{id:'anime',name:'Аниме',icon:'🎌'},{id:'games',name:'Игры',icon:'🎮'},{id:'series',name:'Сериалы',icon:'📺'},{id:'films',name:'Фильмы',icon:'🎬'},{id:'manga',name:'Манга',icon:'📖'},...(C.customCats||[])];
 }
 // видимые вкладки с учётом переименования, порядка и скрытия из настроек (C.tabs)
 function getAllCats() {
@@ -209,7 +234,7 @@ function renderTabs() {
 }
 function colorTabs() {
   document.querySelectorAll('.tab').forEach(t => {
-    const id = t.dataset.cat, c = C.tabs?.[id]?.c || (id.startsWith('cat_') ? 'var(--accent)' : '');
+    const id = t.dataset.cat, c = C.tabs?.[id]?.c || (id.startsWith('cat_') ? 'var(--accent)' : id === 'manga' ? '#10b981' : '');
     if (t.classList.contains('active') && c) { t.style.color = c; t.style.borderTop = '2px solid ' + c; }
     else { t.style.color = ''; t.style.borderTop = ''; }
   });
