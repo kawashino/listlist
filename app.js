@@ -5,7 +5,7 @@ const SUPA_KEY = 'sb_publishable_XvUI2M2jmfixsE3d_ikJZQ_DXp5WyKY';
 // ===== ЗАЩИТА ВХОДОМ (пароль хранится только как хеш) =====
 const PW_SALT = 'wl-a00e84dea84412e4';
 const PW_ITER = 150000;
-const PW_HASH = 'b744f4673664c275b9eaf52829955082f55b632da1229f7df910678775e06c38';
+const PW_HASH = '1ba1c8fa0387cfc44eea7169dd568f015103279dc32a45c2526acec241e06aad';
 // Новый пароль: открой makehash.html, введи пароль и вставь полученный хеш в PW_HASH
 // =========================================================
 
