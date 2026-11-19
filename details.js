@@ -1,8 +1,18 @@
 /* details.js: Окно с подробностями карточки: описание, серии, реакции, комментарии, статистика. */
 
-function react(id,e){const r={...(items[id].reacts||{})},n=[...(r[e]||[])],k=n.indexOf(ME);if(k<0)n.push(ME);else n.splice(k,1);r[e]=n;patch(id,{reacts:r});}
+function react(id,e){
+  const i=items[id],r={...(i.reacts||{})},n=[...(r[e]||[])],k=n.indexOf(ME),had=k>=0;if(had)n.splice(k,1);else n.push(ME);r[e]=n;
+  if(!extrasOn){patch(id,{reacts:r});return;}
+  items[id]={...i,reacts:r};render();if(infoId===id)drawInfo();
+  (had?xtDel('item_reacts',`item_id=eq.${encodeURIComponent(id)}&emoji=eq.${encodeURIComponent(e)}&author=eq.${encodeURIComponent(ME)}`):xtAdd('item_reacts',{item_id:id,emoji:e,author:ME})).catch(()=>setSyncState('error','ошибка'));
+}
 
-function addCmt(){const t=$('cmt').value.trim();if(!t)return;patch(infoId,{comments:[...(items[infoId].comments||[]),{by:ME,text:t,ts:Date.now()}]});}
+function addCmt(){
+  const t=$('cmt').value.trim();if(!t)return;const c={by:ME,text:t,ts:Date.now(),id:'c'+Date.now().toString(36)+Math.random().toString(36).slice(2,6)};
+  if(!extrasOn){patch(infoId,{comments:[...(items[infoId].comments||[]),c]});return;}
+  const id=infoId;items[id]={...items[id],comments:[...(items[id].comments||[]),c]};render();drawInfo();
+  xtAdd('item_comments',{id:c.id,item_id:id,author:ME,body:t,ts:c.ts}).catch(()=>setSyncState('error','ошибка'));
+}
 
 async function openInfo(id){
   const i=items[id];if(!i)return;infoId=id;$('info').classList.add('open');drawInfo();
@@ -60,4 +70,24 @@ function infoEpisodesAndFear(){
 
 function infoArchiveButton(){const i=items[infoId];if(i)$('infoBody').insertAdjacentHTML('beforeend',`<div style="margin-top:12px"><button class="upload-btn" onclick="patch(infoId,{archived:!items[infoId].archived})">📦 ${i.archived?'Вернуть из архива':'В архив'}</button></div>`);}
 
-function drawInfo(){drawInfoMain();infoPosterPicker();infoEpisodesAndFear();infoArchiveButton();}
+function drawInfo(){drawInfoMain();infoPosterPicker();infoEpisodesAndFear();infoArchiveButton();applyPosterColor();}
+
+/* Цвета из постера: средний яркий цвет обложки подкрашивает окно карточки. Работает, если сайт-источник картинки разрешает чтение пикселей. */
+function posterColor(url){
+  return new Promise(res=>{
+    if(!url)return res(null);
+    try{const c=localStorage.getItem('wl_pc_'+url);if(c)return res(c==='-'?null:c);}catch(e){}
+    const im=new Image(),done=col=>{try{localStorage.setItem('wl_pc_'+url,col||'-');}catch(e){}res(col);};
+    im.crossOrigin='anonymous';im.onerror=()=>res(null);
+    im.onload=()=>{try{const cv=document.createElement('canvas');cv.width=cv.height=24;const x=cv.getContext('2d');x.drawImage(im,0,0,24,24);const d=x.getImageData(0,0,24,24).data;let r=0,g=0,b=0,n=0;
+      for(let k=0;k<d.length;k+=4){const mx=Math.max(d[k],d[k+1],d[k+2]),mn=Math.min(d[k],d[k+1],d[k+2]);if(mx-mn>30&&mx>60){r+=d[k];g+=d[k+1];b+=d[k+2];n++;}}
+      done(n?'#'+[r,g,b].map(v=>Math.round(v/n).toString(16).padStart(2,'0')).join(''):null);}catch(e){done(null);}};
+    im.src=url;
+  });
+}
+async function applyPosterColor(){
+  const box=$('infoBody'),i=items[infoId];if(!box||!i)return;
+  if(!U().posterColor){box.style.removeProperty('--accent');box.style.background='';return;}
+  const col=await posterColor(i.poster||(i.info&&i.info.poster));if(infoId!==i.id)return;
+  if(col){box.style.setProperty('--accent',col);box.style.background=`linear-gradient(160deg,${col}40,#1a1e35 55%)`;}else{box.style.removeProperty('--accent');box.style.background='';}
+}
