@@ -50,3 +50,53 @@ async function usage(silent){
     el.innerHTML=`Файлы: <b>${(bytes/1048576).toFixed(1)} МБ</b> (${n} шт.), карточек: <b>${Object.keys(items).length}</b>.${warn?' ⚠️ почти заполнено.':''} Точные лимиты: Supabase → Project → Usage.`;}
   catch(e){if(!silent)el.textContent='Не удалось получить данные';}
 }
+
+/* ===== «Поделиться → в наш список», ссылка из буфера, экран «Состояние», экран «Сегодня» ===== */
+let SHARED=(()=>{
+  const p=new URLSearchParams(location.search);if(!(p.has('url')||p.has('text')||p.has('title')))return'';
+  const t=[p.get('url'),p.get('text'),p.get('title')].filter(Boolean).join(' '),m=t.match(/https?:\/\/\S+/);
+  try{history.replaceState(null,'',location.pathname);}catch(e){}
+  return m?m[0]:t.trim();
+})();
+function handleShare(){if(!SHARED)return;const s=SHARED;SHARED='';openModal();$('inputTitle').value=s;onTitle();}
+async function pasteLink(auto){
+  try{
+    if(auto){const p=await navigator.permissions.query({name:'clipboard-read'});if(p.state!=='granted')return;}
+    const t=(await navigator.clipboard.readText()).trim();
+    if(/^https?:\/\/\S+$/.test(t)&&!$('inputTitle').value){$('inputTitle').value=t;onTitle();}else if(!auto)toast('В буфере нет ссылки');
+  }catch(e){if(!auto)toast('Браузер не дал прочитать буфер: вставь ссылку вручную');}
+}
+const ago=t=>{const s=Math.round((Date.now()-t)/1000);return s<60?s+' с назад':s<3600?Math.round(s/60)+' мин назад':Math.round(s/3600)+' ч назад';};
+async function statusReport(){
+  const s=STAT,ws=typeof realtimeChannel!=='undefined'&&realtimeChannel&&realtimeChannel.readyState===1;let v='неизвестно';
+  try{v=(await caches.keys()).join(', ')||'нет';}catch(e){}
+  return[['База',s.fetch?'данные получены '+ago(s.fetch):'ещё не загружались'],
+   ['Мгновенная синхронизация',(ws?'подключена':'нет соединения')+' ('+s.rt+')'+(s.rtAt?', последнее событие '+ago(s.rtAt):'')],
+   ['Комментарии, реакции, «хочу»',extrasOn?'в отдельных таблицах, без конфликтов':'старый режим: выполни SQL из инструкции'],
+   ['Карточек',Object.keys(items).length],['Офлайн-копия',Math.round((localStorage.getItem('wl_cache')||'').length/1024)+' КБ'],
+   ['Версия кэша',v],['Пользователь',ME],['Браузер',String(navigator.userAgent||'').slice(0,90)],
+   ['Ошибки скриптов',window.__errs&&__errs.length?__errs.join(' | '):'нет']];
+}
+async function showStatus(){
+  const L=await statusReport();
+  $('statusBody').innerHTML='<div class="modal-title">🩺 Состояние</div>'+L.map(([k,v])=>`<div class="br" style="align-items:flex-start"><span style="width:150px;flex:none">${esc(k)}</span><b style="font-weight:500;word-break:break-word">${esc(v)}</b></div>`).join('')
+   +'<div class="btn-row"><button class="btn btn-secondary" onclick="refreshItems().then(showStatus)">Обновить сейчас</button><button class="btn btn-primary" onclick="copyStatus()">Скопировать отчёт</button></div>';
+  $('status').classList.add('open');
+}
+async function copyStatus(){try{await navigator.clipboard.writeText((await statusReport()).map(([k,v])=>k+': '+v).join('\n'));toast('Отчёт скопирован');}catch(e){toast('Не удалось скопировать');}}
+function showToday(){
+  const all=Object.values(items).filter(i=>!i.archived),now=all.filter(i=>sOf(i)==='watching'),want=all.filter(i=>sOf(i)==='want'),both=want.filter(i=>Object.keys(i.wants||{}).length>1);
+  const next=[...both,...want.filter(i=>!both.includes(i)).sort(()=>Math.random()-.5)].slice(0,3),recent=all.filter(i=>sOf(i)==='done').sort((a,b)=>(b.ts||0)-(a.ts||0)).slice(0,4);
+  const row=i=>`<div class="br" style="gap:10px;margin:8px 0">${i.poster?`<img class="poster" style="width:34px;height:48px" src="${esc(i.poster)}">`:''}<span style="flex:1;width:auto;white-space:normal;cursor:pointer" onclick="openInfo('${i.id}')">${esc(i.title)}${EP.includes(i.cat)&&i.episode?` <small style="color:var(--text3)">· ${i.cat==='manga'?'гл.':'сер.'} ${i.episode}${i.total?'/'+i.total:''}</small>`:''}</span>${EP.includes(i.cat)?`<button class="pp" onclick="bump('${i.id}');showToday()">+1</button>`:''}</div>`;
+  $('todayBody').innerHTML='<div class="modal-title">🏠 Сегодня</div><div class="cs-title">Смотрим сейчас</div>'+(now.map(row).join('')||'<small style="color:var(--text3)">Ничего не в процессе</small>')
+   +'<div class="cs-title" style="margin-top:14px">Что дальше'+(both.length?' (💗 хотите оба — первыми)':'')+'</div>'+(next.map(row).join('')||'<small style="color:var(--text3)">В «Хочу» пусто</small>')
+   +'<div class="cs-title" style="margin-top:14px">Недавно закончили</div>'+(recent.map(row).join('')||'<small style="color:var(--text3)">Пока ничего</small>');
+  $('today').classList.add('open');
+}
+addEventListener('keydown',e=>{if(!/INPUT|TEXTAREA|SELECT/.test(e.target.tagName)&&!e.ctrlKey&&!e.metaKey&&!e.altKey&&e.key.toLowerCase()==='t')showToday();});
+function buildExtraUi(){
+  const cl="if(event.target===this)this.classList.remove('open')";
+  document.body.insertAdjacentHTML('beforeend',`<div id="status" class="overlay" onclick="${cl}"><div class="modal" id="statusBody"></div></div><div id="today" class="overlay" onclick="${cl}"><div class="modal" id="todayBody"></div></div>`);
+  $('tools').insertAdjacentHTML('beforeend','<button class="filter-btn" onclick="showToday()">🏠 Сегодня</button><button class="filter-btn" onclick="showStatus()">🩺 Состояние</button>');
+  $('inputTitle').insertAdjacentHTML('afterend','<button type="button" class="upload-btn" style="margin-top:6px" onclick="pasteLink()">📋 Вставить ссылку из буфера</button>');
+}
