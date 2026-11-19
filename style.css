@@ -300,3 +300,69 @@ input[type=file] { display:none; }
   0%,100% { transform: translateX(0); } 20% { transform: translateX(-9px); }
   40% { transform: translateX(8px); } 60% { transform: translateX(-6px); } 80% { transform: translateX(4px); }
 }
+
+/* ===== Стили, раньше вставлявшиеся из JS (часть 3б). Порядок блоков сохранён. ===== */
+/* ===== из buildInterface: стили, раньше вставлялись из JS ===== */
+#fxCanvas{position:fixed;inset:0;z-index:0;pointer-events:none}
+  .item{position:relative}.poster{width:46px;height:64px;object-fit:cover;border-radius:8px;flex-shrink:0}
+  .chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:5px;align-items:center}
+  .chips>*{font-size:11px;padding:2px 8px;border-radius:20px;background:rgba(255,255,255,.07);color:var(--text2)}
+  .stb{cursor:pointer}.chips .rt{color:#facc15}.chips .tg{background:var(--accent-glow);color:var(--accent2)}
+  .pp{border:0;background:var(--accent);color:#fff;border-radius:10px;padding:0 7px;margin-left:5px;cursor:pointer;font-size:11px}
+  .st-done{background:var(--done-bg)!important;border-color:rgba(34,197,94,.2)!important}.st-done .item-title{text-decoration:line-through;opacity:.55}
+  .st-done .check{background:var(--done);border-color:var(--done)}.st-dropped{opacity:.55}.st-watching{border-left:3px solid var(--accent)}
+  .row3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.modal{max-height:92dvh;overflow-y:auto}
+  #toast{position:fixed;left:50%;bottom:90px;transform:translate(-50%,20px);background:#1d2140;color:#fff;border:1px solid var(--border-color);border-radius:12px;padding:10px 14px;display:flex;gap:12px;align-items:center;opacity:0;pointer-events:none;transition:.25s;z-index:60;font-size:13px}
+  #toast.show{opacity:1;transform:translate(-50%,0);pointer-events:auto}#toast button{background:var(--accent);border:0;color:#fff;border-radius:8px;padding:5px 10px;cursor:pointer}
+  .rou-t{font-size:24px;font-weight:700;margin:22px 0;min-height:64px;display:grid;place-items:center;transition:.2s}.rou-t.win{color:var(--accent2);transform:scale(1.08)}
+
+/* ===== из buildMediaUi ===== */
+.cp-tabs{flex-wrap:wrap;overflow:visible}.cp-tab{padding:9px 12px}
+
+/* ===== из buildInfoToolsUi: стили, раньше вставлялись из JS ===== */
+.both{box-shadow:inset 0 0 0 2px #ff6fa5}.whgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}.whgrid img{width:100%;height:64px;object-fit:cover;border-radius:6px;cursor:pointer}
+  .br{display:flex;align-items:center;gap:8px;font-size:12px;margin:4px 0}.br span{width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.bw{flex:1}.bw i{display:block;height:8px;background:var(--accent);border-radius:4px}
+  .pick{display:inline-block;width:30%;margin:4px;cursor:pointer;font-size:12px;vertical-align:top}.pick img{width:100%;aspect-ratio:2/3;object-fit:cover;border-radius:8px}
+
+/* ===== из buildSmartUi: стили, раньше вставлялись из JS ===== */
+.eg{display:flex;flex-wrap:wrap;gap:4px;margin:8px 0}.eg b{width:30px;height:28px;display:grid;place-items:center;font-size:11px;border-radius:6px;background:rgba(255,255,255,.07);cursor:pointer}.eg b.on{background:var(--accent);color:#fff}
+  .sug{display:flex;gap:8px;overflow-x:auto;margin:-6px 0 12px;font-size:11px;color:var(--text2)}.pick2{flex:none;width:76px;text-align:center;cursor:pointer}.pick2 img{width:76px;height:108px;object-fit:cover;border-radius:8px}
+
+/* ===== из buildSettingsUi: стили, раньше вставлялись из JS ===== */
+body.glow .item{box-shadow:0 0 var(--glow) var(--glowc),var(--card-shadow)}
+  body.gradb .item{border:2px solid transparent;background:linear-gradient(var(--card-bg),var(--card-bg)) padding-box,linear-gradient(135deg,var(--ga),var(--gb)) border-box}
+  #list{grid-template-columns:repeat(var(--cols,2),1fr)!important}.item{padding:calc(13px*var(--dens,1)) 14px}
+  header{transition:transform .25s}header.hid{transform:translateY(-110%)}
+  .toolbar{position:sticky;top:var(--hh,0);z-index:4;background:var(--bg2);padding:8px 0;margin-top:0;transition:top .25s}body.hh .toolbar{top:0}
+  body.navb .tabs{position:fixed;bottom:0;left:0;right:0;z-index:20;max-width:860px;margin:0 auto}body.navb .content{padding-bottom:150px}body.navb .fab{bottom:78px}
+  body.fabl .fab{right:auto;left:24px}
+  .sk{height:76px;border-radius:12px;background:linear-gradient(90deg,rgba(255,255,255,.04),rgba(255,255,255,.12),rgba(255,255,255,.04));background-size:200% 100%;animation:sh 1.2s infinite}@keyframes sh{to{background-position:-200% 0}}
+  #bgVid{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+
+/* ===== из buildLayoutUi: стили, раньше вставлялись из JS ===== */
+.desktop-wrap{max-width:var(--maxw,860px)!important}
+  @media(min-width:700px){.fab{right:max(24px,calc(50% - var(--maxw,860px)/2 + 24px))!important}}
+  #list{grid-template-columns:repeat(var(--colsm,1),1fr)!important;gap:var(--gap,10px)!important}
+  @media(min-width:700px){#list{grid-template-columns:repeat(var(--cols,2),1fr)!important}}
+  .chips{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}.chips::-webkit-scrollbar{display:none}.chips>*{flex:none;white-space:nowrap}
+  body.chipsw .chips{flex-wrap:wrap;overflow:visible}
+  .item-title{white-space:normal!important;display:-webkit-box;-webkit-line-clamp:var(--tl,1);-webkit-box-orient:vertical;overflow:hidden}
+  .btn-icon{width:var(--bs,30px);height:var(--bs,30px)}.item .poster{width:var(--pw,46px);height:var(--ph,64px)}
+  body.nop .poster{display:none}body.non .item-meta{display:none}body.nch .chips{display:none}
+  body.cmp .chips,body.cmp .item-meta,body.cmp .poster{display:none}body.cmp .item{padding:6px 12px!important}
+  body.gal #list{grid-template-columns:repeat(auto-fill,minmax(var(--gal,150px),1fr))!important}
+  body.gal .item{flex-direction:column;align-items:stretch;padding:0!important;gap:0}
+  body.gal .item .poster{width:100%;height:auto;aspect-ratio:2/3;border-radius:0}
+  body.gal .item-body{padding:8px 10px 10px}body.gal .check{position:absolute;top:8px;left:8px;z-index:2;background:rgba(0,0,0,.5)}
+  body.gal .item-actions{position:absolute;top:8px;right:8px;z-index:2}
+  @media(hover:hover){body.acth .item-actions{opacity:0;transition:.15s}body.acth .item:hover .item-actions{opacity:1}}
+  #tools{display:none;flex-wrap:wrap;gap:6px;margin:0 0 12px}body.tools-open #tools{display:flex}#sideBox{display:none}
+  @media(min-width:1000px){
+   body.side #mainApp{display:grid!important;grid-template-columns:260px 1fr;grid-template-areas:"t b" "s b";grid-template-rows:auto 1fr;gap:0 16px;align-items:start}
+   body.side .tabs{grid-area:t;display:flex;flex-direction:column;gap:6px;background:none;border:0}
+   body.side .tab{flex-direction:row;justify-content:flex-start;border-radius:12px;border-top:0!important;padding:12px 16px}
+   body.side .tab.active{border-left:3px solid var(--accent)}
+   body.side #sideBox{grid-area:s;display:block;padding:12px;margin-top:10px;background:var(--bg2);border-radius:12px;position:sticky;top:16px}
+   body.side .body-wrap{grid-area:b;border-radius:16px!important}
+   body.sideon #tools{display:flex!important;flex-direction:column;align-items:stretch;margin:10px 0 0}body.sideon #tools>*{width:100%}body.sideon #toolsBtn{display:none}
+  }
