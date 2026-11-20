@@ -19,3 +19,9 @@ function toast(msg,undo){
   if(undo)t.querySelector('button').onclick=()=>{undo();t.classList.remove('show');};
   clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),6000);
 }
+
+/* Шаги сборки интерфейса: каждый модуль регистрирует свои вставки в страницу (поля, кнопки, панели) через uiStep(номер, функция).
+   Номер задаёт порядок запуска: он важен там, где несколько модулей вставляют элементы в одно место (например, кнопки в панель над списком). */
+const UI_STEPS=[];
+function uiStep(order,fn){UI_STEPS.push([order,fn]);}
+function runUiSteps(){UI_STEPS.sort((a,b)=>a[0]-b[0]).forEach(([,fn])=>fn());}
