@@ -105,3 +105,41 @@ function drawMoreLayout(){
 }
 
 function drawMore(){drawMoreMain();drawMoreLayout();}
+
+/* ===== Сборка интерфейса этого модуля: шаги выполняются в порядке номеров (uiStep, см. util.js), номера хранят исходный порядок вставки элементов ===== */
+uiStep(130, () => {
+document.querySelector('.cp-tabs').insertAdjacentHTML('beforeend',`<div class="cp-tab" data-tab="fx" onclick="switchCpTab('fx')">✨ Темы и FX</div>`);
+});
+uiStep(340, () => {
+$('cats0')||document.querySelector('.cp-tabs').insertAdjacentHTML('beforeend','<div class="cp-tab" data-tab="more" onclick="switchCpTab(\'more\')">🛠 Ещё</div>');
+});
+uiStep(350, () => {
+document.querySelector('.cp-body').insertAdjacentHTML('beforeend','<div class="cp-page" data-page="more" id="moreBody"></div>');
+});
+uiStep(390, () => {
+applyUI();
+});
+uiStep(400, () => {
+$('tabsNav').insertAdjacentHTML('afterend','<div id="sideBox"></div>');
+});
+uiStep(410, () => {
+const tb=document.querySelector('.toolbar'),tl=document.createElement('div');tl.id='tools';tb.after(tl);
+  [...tb.children].forEach(el=>{if(el.classList.contains('filter-row')||el.id==='fltBtn'||(el.getAttribute('onclick')||'').includes('roulette()'))return;tl.append(el);});
+  tl.insertAdjacentHTML('beforeend','<button class="filter-btn" onclick="loadAllItems().then(render)">🔄 Обновить</button>');
+  tb.insertAdjacentHTML('beforeend','<button class="filter-btn" id="toolsBtn" onclick="setU(\'toolsOpen\',!U().toolsOpen)">⋯</button>');
+});
+uiStep(420, () => {
+$('sortSelect').insertAdjacentHTML('beforeend','<option value="rating">⭐ По оценке</option><option value="year">📆 По году</option>');
+});
+uiStep(430, () => {
+try{const st=JSON.parse(localStorage.getItem('wl_state')||'{}');
+    if(st.t)currentTab=st.t;
+    if(st.f){currentFilter=st.f;document.querySelectorAll('.filter-row .filter-btn').forEach(b=>b.classList.toggle('active',(b.getAttribute('onclick')||'').includes("'"+st.f+"'")));}
+    if(st.s){currentSort=st.s;$('sortSelect').value=st.s;}}catch(e){}
+});
+uiStep(440, () => {
+applyUI();
+});
+uiStep(450, () => {
+render();
+});
