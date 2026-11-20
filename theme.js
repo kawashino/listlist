@@ -72,3 +72,39 @@ document.addEventListener('visibilitychange',()=>{const v=$('bgVid');if(v)docume
 async function loadVid(inp){const f=inp.files[0];if(!f)return;if(f.size>48e6){toast('Видео больше 48 МБ, лимит хранилища на файл 50 МБ');return;}toast('Загружаю видео…');try{setU('video',await upload(f,'video'));toast('Видео-фон установлен');}catch(e){toast('Не вышло загрузить видео');}}
 
 ICON_LABELS.empty='Картинка пустого списка';ICON_LABELS.manga='Вкладка Манга';ICON_DEFS.manga='📖';
+
+/* ===== Сборка интерфейса этого модуля: шаги выполняются в порядке номеров (uiStep, см. util.js), номера хранят исходный порядок вставки элементов ===== */
+uiStep(140, () => {
+document.querySelector('.cp-body').insertAdjacentHTML('beforeend',`<div class="cp-page" data-page="fx">
+   <div class="cs"><div class="cs-title">Темы</div><div id="themeList" class="color-grid"></div><button class="upload-btn" onclick="saveTheme()">💾 Сохранить текущее оформление как тему</button></div><div class="sep"></div>
+   <div class="cs"><div class="cs-title">Эффекты на фоне</div>
+    <select class="cp-select" id="fxType" onchange="setFx('type',this.value)"><option value="none">Нет</option><option value="sakura">🌸 Сакура</option><option value="snow">❄️ Снег</option><option value="stars">✨ Звёзды</option><option value="fireflies">🟡 Светлячки</option><option value="hearts">💗 Сердечки</option></select>
+    <div class="rr"><span class="cl">Количество</span><input type="range" id="fxN" min="10" max="200" oninput="setFx('n',+this.value)"></div>
+    <div class="rr"><span class="cl">Скорость</span><input type="range" id="fxS" min="0.3" max="3" step="0.1" oninput="setFx('speed',+this.value)"></div>
+    <div class="rgb-row"><span class="cl" style="font-size:13px;color:var(--text)">Хвост за курсором</span><label class="toggle"><input type="checkbox" id="fxTrail" onchange="setFx('trail',this.checked)"><span class="tslider"></span></label></div>
+    <div class="rgb-row"><span class="cl" style="font-size:13px;color:var(--text)">Звук при отметке</span><label class="toggle"><input type="checkbox" id="fxSound" onchange="setFx('sound',this.checked)"><span class="tslider"></span></label></div></div><div class="sep"></div>
+   <div class="cs"><div class="cs-title">Приложение и данные</div>
+    <button class="upload-btn" onclick="installApp()">📲 Установить как приложение</button>
+    <button class="upload-btn" onclick="exportData()">⬇️ Резервная копия (JSON)</button>
+    <button class="upload-btn" onclick="switchMe()">👤 Я: <span id="meName">${esc(ME)}</span> (сменить)</button></div></div>`);
+});
+uiStep(150, () => {
+renderThemes();
+});
+uiStep(200, () => {
+document.querySelector('[data-page="fx"]').insertAdjacentHTML('beforeend',`<div class="sep"></div><div class="cs"><div class="cs-title">Постеры</div>
+   <button class="upload-btn" onclick="fillPosters()">🖼 Найти постеры для всех без обложки</button>
+   <div style="font-size:11px;color:var(--text3)">Источники: Shikimori, iTunes, Википедия. Ключи не нужны.</div></div>`);
+});
+uiStep(250, () => {
+document.querySelector('[data-page="bg"]').insertAdjacentHTML('beforeend',`<div class="sep"></div><div class="cs"><div class="cs-title">Обои из интернета</div>
+   <div class="cr"><input id="whQ" class="cp-select" placeholder="Wallhaven: anime, sakura, forest…" onkeydown="if(event.key==='Enter')whSearch()"><button class="upload-btn" onclick="whSearch()">Найти</button></div>
+   <select id="whS" class="cp-select"><option value="relevance">Релевантные</option><option value="toplist">Топ</option><option value="random">Случайные</option><option value="views">По просмотрам</option></select>
+   <div id="whRes" class="whgrid"></div>
+   <div class="cs-title">Своя ссылка на картинку</div>
+   <div class="cr"><input id="urlBg" class="cp-select" placeholder="Pinterest (i.pinimg.com), Imgur и др."><button class="upload-btn" onclick="setBgUrl()">Поставить</button></div>
+   <div style="font-size:11px;color:var(--text3)">Pinterest: открой пин, ПКМ по картинке, «Копировать адрес изображения» (i.pinimg.com…). Ссылка на страницу пина не подойдёт.</div></div>`);
+});
+uiStep(370, () => {
+renderIconPreviews();
+});
