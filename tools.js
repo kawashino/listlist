@@ -100,3 +100,29 @@ function buildExtraUi(){
   $('tools').insertAdjacentHTML('beforeend','<button class="filter-btn" onclick="showToday()">🏠 Сегодня</button><button class="filter-btn" onclick="showStatus()">🩺 Состояние</button>');
   $('inputTitle').insertAdjacentHTML('afterend','<button type="button" class="upload-btn" style="margin-top:6px" onclick="pasteLink()">📋 Вставить ссылку из буфера</button>');
 }
+
+/* ===== Сборка интерфейса этого модуля: шаги выполняются в порядке номеров (uiStep, см. util.js), номера хранят исходный порядок вставки элементов ===== */
+uiStep(100, () => {
+document.body.insertAdjacentHTML('beforeend',`<canvas id="fxCanvas"></canvas><div id="toast"></div>
+  <div id="rou" class="overlay" onclick="if(event.target===this)this.classList.remove('open')"><div class="modal" style="text-align:center">
+   <div style="font-size:13px;color:var(--text2)">Сегодня смотрим…</div><div id="rouTitle" class="rou-t">🎲</div>
+   <label style="font-size:12px;color:var(--text2)"><input type="checkbox" id="rouAll"> из всех категорий</label>
+   <div class="btn-row"><button class="btn btn-secondary" onclick="$('rou').classList.remove('open')">Закрыть</button><button class="btn btn-primary" onclick="roulette()">Ещё раз</button></div></div></div>`);
+});
+uiStep(180, () => {
+if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+});
+uiStep(210, () => {
+const cl="if(event.target===this)this.classList.remove('open')";
+  document.body.insertAdjacentHTML('beforeend',`
+   <div id="info" class="overlay" onclick="${cl}"><div class="modal" id="infoBody"></div></div>
+   <div id="stats" class="overlay" onclick="${cl}"><div class="modal" id="statsBody"></div></div>
+   <div id="imp" class="overlay" onclick="${cl}"><div class="modal"><div class="modal-title">📥 Импорт в текущую категорию</div>
+    <div class="field"><label>Названия, по одному в строке</label><textarea id="impText" style="height:110px"></textarea></div>
+    <div class="field"><label>или файл: Letterboxd CSV / MyAnimeList XML</label><input type="file" id="impFile" accept=".csv,.xml,.txt" style="display:block"></div>
+    <div class="btn-row"><button class="btn btn-secondary" onclick="$('imp').classList.remove('open')">Закрыть</button><button class="btn btn-primary" onclick="doImport()">Импортировать</button></div></div></div>`);
+});
+uiStep(220, () => {
+$('rouAll').parentElement.insertAdjacentHTML('afterend','<br><label style="font-size:12px;color:var(--text2)"><input type="checkbox" id="rouBoth"> только «хотим оба»</label><div id="rouPicks"></div><button class="upload-btn" style="margin-top:8px" onclick="night()">🍿 3 варианта на вечер</button>');
+});
+uiStep(1000,buildExtraUi);
