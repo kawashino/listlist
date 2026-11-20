@@ -83,6 +83,7 @@ function onTitle(){
     box.textContent='Ищу…';
     const c=/^https?:\/\//.test(v)?await linkCands(v):await cands(v,$('inputCat').value||currentTab);
     if(!c.length){box.textContent=/^https?:/.test(v)?'Для этой ссылки нет открытого API. Введи название':'Ничего не нашлось';return;}
+    if(c.length===1&&c[0].exact){window._cs=c;takePick(0);toast('Распознано: '+c[0].title);return;}
     window._cs=c;box.innerHTML=c.slice(0,6).map((x,k)=>`<div class="pick2" onclick="takePick(${k})"><img src="${esc(x.poster)}"><span>${esc(x.title||'')}${x.year?' · '+x.year:''}</span></div>`).join('');
   },450);
 }
@@ -124,8 +125,39 @@ async function wdByStatement(prop,v){
 }
 /* Ссылка с точным определением, а если сайт незнакомый, ищем по словам из адреса и даём выбрать */
 async function linkCands(u){
-  const x=await fromLink(u);if(x)return[x];
+  const x=await fromLink(u);if(x){x.exact=true;return[x];}
   let slug='';try{slug=decodeURIComponent(u.split('?')[0].replace(/\/+$/,'').split('/').pop()||'');}catch(e){}
   slug=slug.replace(/\.\w+$/,'').replace(/^\d+[-_]/,'').replace(/[-_+]+/g,' ').trim();
   return slug.length>2?cands(slug,$('inputCat').value||currentTab):[];
 }
+
+/* ===== Название-ссылка: превращаем в настоящее название и подтягиваем описание ===== */
+const isUrl=s=>/^https?:\/\/\S+$/.test((s||'').trim());
+function slugTitle(u){   // читаемое название из адреса, если распознать не удалось
+  let s='';try{s=decodeURIComponent(u.split('?')[0].replace(/\/+$/,'').split('/').pop()||'');}catch(e){}
+  s=s.replace(/\.\w+$/,'').replace(/^\d+[-_]/,'').replace(/[-_+]+/g,' ').trim();
+  if(s.length<3){try{s=new URL(u).hostname.replace(/^www\./,'');}catch(e){s=u;}}
+  return s;
+}
+async function resolveTitleLink(){   // вызывается перед сохранением карточки из формы
+  const v=$('inputTitle').value.trim();if(!isUrl(v)||_pick)return;
+  if(!$('inputLink').value)$('inputLink').value=v;
+  const c=await linkCands(v);
+  if(c.length){window._cs=c;takePick(0);}
+  if(isUrl($('inputTitle').value))$('inputTitle').value=slugTitle(v);
+}
+async function repairLinkTitles(){   // уже сохранённые карточки, где вместо названия осталась ссылка
+  const bad=Object.values(items).filter(i=>isUrl(i.title)).slice(0,5);
+  for(const i of bad){
+    const c=(await linkCands(i.title))[0],cur=items[i.id];if(!cur)continue;
+    items[i.id]={...cur,link:cur.link||i.title,title:(c&&c.title)||slugTitle(i.title),poster:cur.poster||(c&&c.poster)||'',cat:(c&&c.cat)||cur.cat,total:cur.total||(c&&c.eps)||0,
+      info:c?{ts:1,year:c.year||'',genres:c.genres||'',desc:c.desc||'',score:c.score||'',trailer:c.trailer||''}:cur.info};
+    try{await upsertItem(items[i.id]);}catch(e){}
+  }
+  if(bad.length){render();toast('Исправлены названия-ссылки: '+bad.length);}
+}
+
+/* ===== Сборка интерфейса этого модуля: шаги выполняются в порядке номеров (uiStep, см. util.js), номера хранят исходный порядок вставки элементов ===== */
+uiStep(190, () => {
+$('fPoster').insertAdjacentHTML('afterend','<button type="button" class="upload-btn" style="margin-top:6px" onclick="$(\'fPosterFile\').click()">📁 Загрузить с устройства</button><input type="file" id="fPosterFile" accept="image/*" onchange="upPoster(this)">');
+});
