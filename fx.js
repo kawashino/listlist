@@ -36,3 +36,11 @@ addEventListener('resize',()=>{if(cv){cv.width=innerWidth;cv.height=innerHeight;
 function playBeep(){if(!FX().sound)return;try{au=au||new AudioContext();const o=au.createOscillator(),g=au.createGain();o.frequency.value=660;g.gain.setValueAtTime(.08,au.currentTime);g.gain.exponentialRampToValueAtTime(.001,au.currentTime+.15);o.connect(g);g.connect(au.destination);o.start();o.stop(au.currentTime+.15);}catch(e){}}
 
 function beep(){if(U().vib&&navigator.vibrate)navigator.vibrate(12);playBeep();}
+
+/* ===== Сборка интерфейса этого модуля: шаги выполняются в порядке номеров (uiStep, см. util.js), номера хранят исходный порядок вставки элементов ===== */
+uiStep(160, () => {
+fxSync();
+});
+uiStep(170, () => {
+fxStart();
+});
