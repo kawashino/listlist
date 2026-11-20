@@ -8,6 +8,7 @@ on('afterInit', () => {
   setTimeout(autoRefresh, 6000);        // фоновое обновление данных карточек
   setTimeout(() => usage(true), 9000);  // предупреждение о заполнении хранилища
   handleShare();                        // ссылка, присланная через «Поделиться»
+  setTimeout(repairLinkTitles, 3000);   // карточки, где вместо названия осталась ссылка
 });
 let _pushT;
 on('customSaved', () => { clearTimeout(_pushT); _pushT = setTimeout(pushTheme, 1500); });  // копия оформления в облако
@@ -15,11 +16,5 @@ on('customApplied', applyUI);
 on('panelOpen', drawMore);
 
 window.addEventListener('load',()=>{
-  buildInterface();
-  buildMediaUi();
-  buildInfoToolsUi();
-  buildSmartUi();
-  buildSettingsUi();
-  buildLayoutUi();
-  buildExtraUi();
+  runUiSteps();   // вставка полей, кнопок и панелей: шаги лежат в модулях, порядок задают их номера
 });
