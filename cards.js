@@ -53,6 +53,7 @@ function openModal(){editingId=null;fillForm({});pasteLink(true);}
 function editItem(id){const i=items[id];if(!i)return;editingId=id;fillForm(i);}
 
 async function saveItem(){
+  await resolveTitleLink();
   const title=$('inputTitle').value.trim();if(!title){$('inputTitle').focus();return;}
   const old=editingId?items[editingId]:null,st=$('fStatus').value,rate=parseFloat($('fRating').value)||0,cat=$('inputCat').value||currentTab;
   const ratings={...(old&&old.ratings||{})};if(rate>0)ratings[ME]=rate;else delete ratings[ME];
@@ -154,3 +155,58 @@ async function migrateManga(){
   for(const id of ids){if(C.tabs&&C.tabs[id]){C.tabs.manga=C.tabs.manga||C.tabs[id];delete C.tabs[id];}if(C.icons&&C.icons[id]&&!C.icons.manga)C.icons.manga=C.icons[id];if(currentTab===id)currentTab='manga';}
   saveCustom();renderTabs();render();renderCustomCatList();renderIconPreviews();if(n)toast('Манга перенесена во встроенную вкладку: '+n);
 }
+
+/* ===== Сборка интерфейса этого модуля: шаги выполняются в порядке номеров (uiStep, см. util.js), номера хранят исходный порядок вставки элементов ===== */
+uiStep(110, () => {
+$('overlay').querySelector('.btn-row').insertAdjacentHTML('beforebegin',`
+   <div class="field"><label>Статус</label><select id="fStatus">${Object.entries(ST).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select></div>
+   <div class="field row3"><div><label>Сезон</label><input id="fSeason" type="number" min="0"></div><div><label>Серия</label><input id="fEpisode" type="number" min="0"></div><div><label>Всего серий</label><input id="fTotal" type="number" min="0"></div></div>
+   <div class="field"><label>Моя оценка (1–10)</label><input id="fRating" type="number" min="0" max="10" step="0.5"></div>
+   <div class="field"><label>Теги через запятую</label><input id="fTags" placeholder="хоррор, романтика"></div>
+   <div class="field"><label>Постер (ссылка)</label><input id="fPoster" placeholder="https://… (у аниме найдётся сам)"></div>`);
+});
+uiStep(120, () => {
+document.querySelector('.toolbar').insertAdjacentHTML('beforeend',`<select class="sort-select" onchange="curStatus=this.value;render()"><option value="all">Все статусы</option>${Object.entries(ST).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select><button class="filter-btn" onclick="roulette()">🎲 Что смотрим?</button>`);
+});
+uiStep(230, () => {
+$('fPoster').closest('.field').insertAdjacentHTML('afterend','<div class="field"><label>Коллекция</label><input id="fColl" placeholder="например: Ужастики на Хэллоуин"></div>');
+});
+uiStep(240, () => {
+document.querySelector('.toolbar').insertAdjacentHTML('beforeend','<select id="collSel" class="sort-select" onchange="curColl=this.value;render()"></select><button class="filter-btn" onclick="stats()">📊</button><button class="filter-btn" onclick="$(\'imp\').classList.add(\'open\')">📥</button>');
+});
+uiStep(260, () => {
+updColl();
+});
+uiStep(270, () => {
+$('inputTitle').insertAdjacentHTML('afterend','<div id="sug" class="sug"></div>');
+});
+uiStep(280, () => {
+$('inputTitle').addEventListener('input',onTitle);
+});
+uiStep(290, () => {
+$('fColl').closest('.field').insertAdjacentHTML('afterend','<div class="field"><label>Франшиза (общая для частей)</label><input id="fFr" list="frList" placeholder="Silent Hill"><datalist id="frList"></datalist></div>');
+});
+uiStep(300, () => {
+document.querySelector('.toolbar').insertAdjacentHTML('beforeend','<select id="frSel" class="sort-select" onchange="curFr=this.value;render()" style="display:none"></select><button id="fltBtn" class="filter-btn" onclick="$(\'flt\').classList.add(\'open\')">🔎</button>');
+});
+uiStep(310, () => {
+document.body.insertAdjacentHTML('beforeend',`<div id="flt" class="overlay" onclick="if(event.target===this)this.classList.remove('open')"><div class="modal"><div class="modal-title">🔎 Умные фильтры</div>
+   <div class="field row3"><div><label>Оценка от</label><input id="sfR" type="number" min="0" max="10" step=".5"></div><div><label>Год от</label><input id="sfY1" type="number"></div><div><label>Год до</label><input id="sfY2" type="number"></div></div>
+   <div class="field row3"><div><label>Жанр</label><input id="sfG"></div><div><label>Тег</label><input id="sfT"></div><div><label>Страх от (0–5)</label><input id="sfF" type="number" min="0" max="5"></div></div>
+   <div class="field"><label>Скримеры</label><select id="sfS"><option value="">неважно</option><option value="1">есть</option><option value="0">нет</option></select></div>
+   <div id="views" class="chips"></div>
+   <div class="btn-row"><button class="btn btn-secondary" onclick="resetFlt()">Сбросить</button><button class="btn btn-secondary" onclick="saveView()">💾 Вид</button><button class="btn btn-primary" onclick="applyFlt()">Применить</button></div></div></div>`);
+});
+uiStep(320, () => {
+drawViews();
+});
+uiStep(330, () => {
+updFr();
+});
+uiStep(360, () => {
+document.querySelector('.toolbar').insertAdjacentHTML('beforeend','<button class="filter-btn" onclick="showArch=!showArch;this.style.outline=showArch?\'2px solid var(--accent)\':\'\';render()">📦</button>');
+});
+uiStep(380, () => {
+const c=localStorage.getItem('wl_cache');
+  if(c&&isAuthed()){try{items=JSON.parse(c);render();}catch(e){}}else $('list').innerHTML=Array(6).fill('<div class="sk"></div>').join('');
+});
