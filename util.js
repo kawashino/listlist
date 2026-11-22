@@ -14,6 +14,38 @@ const $=id=>document.getElementById(id);
 
 function ensureMe(){if(!ME){ME=(prompt('Как тебя зовут? (для оценок и пометки «кто добавил»)')||'').trim()||'Я';localStorage.setItem('wl_me',ME);}}
 
+/* ===== ПОИСК =====
+   fuzzyScore: 0 — не подходит, 1 — по подстроке, 2 — по подстроке в начале слова,
+   >2 — по подпоследовательности: «атк» найдёт «Атака титанов».
+   Порядок символов сохраняется, поэтому «naruto» находится в «Naruto Shippuuden». */
+function fuzzyScore(q, text) {
+  q = String(q || '').toLowerCase().trim();
+  if (!q) return 1;
+  const t = String(text || '').toLowerCase();
+  if (!t) return 0;
+  const at = t.indexOf(q);
+  if (at === 0) return 3;
+  if (at > 0) return t[at - 1] === ' ' ? 2 : 1;
+  if (q.length < 3) return 0;   // короткий запрос вроде «на» иначе совпал бы почти со всем
+
+  let qi = 0, streak = 0, score = 0;
+  for (let i = 0; i < t.length && qi < q.length; i++) {
+    if (t[i] === q[qi]) { qi++; streak++; score += streak; } else streak = 0;
+  }
+  return qi === q.length ? score / (q.length * 2) : 0;
+}
+
+// Ищем по названию, заметке, тегам, жанрам и коллекции: так «хоррор» находит карточки по жанру
+function itemSearchScore(query, i) {
+  const q = String(query || '').toLowerCase().trim();
+  if (!q) return 1;
+  const title = String(i.title || '').toLowerCase();
+  const fields = [title, String(i.note || ''), String(i.tags || ''), String(i.info?.genres || ''), String(i.coll || '')];
+  let best = fuzzyScore(q, title) * 2;   // совпадение в названии важнее
+  for (let k = 1; k < fields.length; k++) best = Math.max(best, fuzzyScore(q, fields[k]));
+  return best;
+}
+
 function toast(msg,undo){
   const t=$('toast');t.innerHTML=`<span>${esc(msg)}</span>${undo?'<button>Отменить</button>':''}`;t.classList.add('show');
   if(undo)t.querySelector('button').onclick=()=>{undo();t.classList.remove('show');};

@@ -1,13 +1,33 @@
-// ===== SUPABASE CONFIG =====
-const SUPA_URL = 'https://dspniootbeoebxefopia.supabase.co';
-const SUPA_KEY = 'sb_publishable_XvUI2M2jmfixsE3d_ikJZQ_DXp5WyKY';
+// ===== КОНФИГ =====
+// Значения живут в config.js (он в .gitignore). Шаблон — config.example.js.
+const CFG = window.WL_CONFIG || {};
+const SUPA_URL = CFG.SUPA_URL || '';
+const SUPA_KEY = CFG.SUPA_KEY || '';
 
-// ===== ЗАЩИТА ВХОДОМ (пароль хранится только как хеш) =====
-const PW_SALT = 'wl-a00e84dea84412e4';
-const PW_ITER = 150000;
-const PW_HASH = '1ba1c8fa0387cfc44eea7169dd568f015103279dc32a45c2526acec241e06aad';
-// Новый пароль: открой makehash.html, введи пароль и вставь полученный хеш в PW_HASH
+// ===== ЗАЩИТА ВХОДОМ (в коде только параметры, сам хеш — в config.js) =====
+const PW_SALT = CFG.PW_SALT || '';
+const PW_ITER = CFG.PW_ITER || 150000;
+const PW_HASH = CFG.PW_HASH || '';
+// Новый пароль: открой makehash.html, введи пароль и вставь полученный хеш в config.js → PW_HASH
 // =========================================================
+
+function configReady() { return !!(SUPA_URL && SUPA_KEY && PW_SALT && PW_HASH); }
+function configMissing() { return !configReady(); }
+
+// Понятная подсказка вместо «неверный пароль», если config.js не создан
+function showConfigError() {
+  const box = document.getElementById('pwBox');
+  const err = document.getElementById('passwordError');
+  const btn = document.getElementById('pwBtn');
+  if (btn) btn.disabled = true;
+  if (err) {
+    err.textContent = 'Нет config.js: скопируй config.example.js → config.js и заполни ключи Supabase и PW_HASH';
+    err.classList.add('show');
+    err.style.color = '#f97316';
+  }
+  if (box) box.classList.add('shake');
+  setSyncState('error', 'нет config.js');
+}
 
 let items = {}, currentTab = 'anime', currentFilter = 'all', currentSort = 'date_desc', editingId = null, isSaving = false, searchQuery = '';
 let realtimeChannel = null;
@@ -42,6 +62,7 @@ async function submitPassword() {
   const btn = document.getElementById('pwBtn');
   const val = input.value;
   if (!val) { input.focus(); return; }
+  if (configMissing()) { showConfigError(); return; }
   btn.disabled = true;
   const h = await hashPw(val);
   btn.disabled = false;
@@ -64,20 +85,85 @@ async function submitPassword() {
 }
 
 // ===== SUPABASE REST =====
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
 async function sbFetch(path, opts = {}) {
-  const res = await fetch(`${SUPA_URL}/rest/v1${path}`, {
-    ...opts,
-    headers: {
-      'apikey': SUPA_KEY,
-      'Authorization': `Bearer ${SUPA_KEY}`,
-      'Content-Type': 'application/json',
-      ...(opts.headers || {})
+  const { __noRetry, ...rest } = opts;
+  const limit = __noRetry ? 1 : 3;
+  let lastErr;
+
+  for (let attempt = 0; attempt < limit; attempt++) {
+    try {
+      const res = await fetch(`${SUPA_URL}/rest/v1${path}`, {
+        ...rest,
+        headers: {
+          'apikey': SUPA_KEY,
+          'Authorization': `Bearer ${SUPA_KEY}`,
+          'Content-Type': 'application/json',
+          ...(rest.headers || {})
+        }
+      });
+      // 429 и 5xx — временные: повторяем с задержкой, остальные 4xx не повторяем
+      if (res.status === 429 || res.status >= 500) {
+        lastErr = new Error(`сервер вернул ${res.status}`);
+        lastErr.status = res.status;
+        if (attempt < limit - 1) { await sleep(600 * Math.pow(2, attempt)); continue; }
+        throw lastErr;
+      }
+      if (!res.ok) {
+        const err = await res.text();
+        const e = new Error(`${res.status}: ${err}`);
+        e.status = res.status;
+        throw e;
+      }
+      const text = await res.text();
+      return text ? JSON.parse(text) : null;
+    } catch (e) {
+      // сеть оборвалась (TypeError) или сервер ответил 429/5xx — пробуем ещё раз
+      lastErr = e;
+      if (e.status && e.status < 500 && e.status !== 429) throw e;
+      if (attempt < limit - 1) { await sleep(600 * Math.pow(2, attempt)); continue; }
+      throw e;
     }
-  });
-  if (!res.ok) { const err = await res.text(); throw new Error(`${res.status}: ${err}`); }
-  const text = await res.text();
-  return text ? JSON.parse(text) : null;
+  }
+  throw lastErr || new Error('запрос не удался');
 }
+
+// ===== ОФЛАЙН-ОЧЕРЕДЬ ПИСАТЕЛЕЙ =====
+// Если сети нет, изменения карточек не теряются: они ждут в localStorage и уходят при «online».
+const OUTBOX_KEY = 'wl_outbox';
+function outboxRead() { try { return JSON.parse(localStorage.getItem(OUTBOX_KEY) || '[]'); } catch (e) { return []; } }
+function outboxSave(q) { try { localStorage.setItem(OUTBOX_KEY, JSON.stringify(q)); } catch (e) {} }
+function outboxAdd(op) {
+  const q = outboxRead();
+  q.push({ ...op, ts: Date.now(), _q: (op._q || 0) + 1 });
+  // один и тот же upsert перезаписывает прежний — незачем копить
+  const last = q[q.length - 1];
+  if (last.method === 'PATCH' || last.method === 'POST') {
+    const i = q.findIndex((x, k) => k < q.length - 1 && x.path === last.path && x.method === last.method);
+    if (i >= 0) q.splice(i, 1);
+  }
+  outboxSave(q);
+  setSyncState('error', `нет связи · в очереди ${q.length}`);
+}
+let outboxBusy = false;
+async function outboxFlush() {
+  if (outboxBusy) return;
+  const q = outboxRead();
+  if (!q.length) return;   // очередь пуста: не трогаем индикатор синхронизации
+  outboxBusy = true;
+  const rest = [];
+  for (const op of q) {
+    try { await sbFetch(op.path, { method: op.method, headers: op.headers, body: op.body, __noRetry: true }); }
+    catch (e) { rest.push(op); }
+  }
+  outboxSave(rest);
+  outboxBusy = false;
+  if (!rest.length) { setSyncState('live', 'онлайн'); render(); }
+  else setSyncState('error', `в очереди ${rest.length}`);
+}
+addEventListener('online', outboxFlush);
+setTimeout(outboxFlush, 4000);
 
 const SNAP = {};  // последнее известное серверное состояние карточек: в базу уходят только изменённые поля
 async function loadAllItems() {
@@ -102,24 +188,40 @@ async function upsertItem(item) {
   let body = item;
   if (extrasOn) { body = { ...item }; XKEYS.forEach(k => delete body[k]); }   // эти поля живут в своих таблицах
   const old = SNAP[item.id] ? JSON.parse(SNAP[item.id]) : null;
-  if (!old) {
-    await sbFetch('/items', {
-      method: 'POST',
-      headers: { 'Prefer': 'resolution=merge-duplicates' },
-      body: JSON.stringify(body)
-    });
-  } else {
-    const d = {};
-    for (const k in body) if (JSON.stringify(body[k]) !== JSON.stringify(old[k])) d[k] = body[k];
-    if (!Object.keys(d).length) return;
-    await sbFetch('/items?id=eq.' + encodeURIComponent(item.id), { method: 'PATCH', body: JSON.stringify(d) });
+  const d = old ? diffBody(old, body) : body;
+  if (old && !Object.keys(d).length) return;
+  try {
+    if (!old) {
+      await sbFetch('/items', {
+        method: 'POST',
+        headers: { 'Prefer': 'resolution=merge-duplicates' },
+        body: JSON.stringify(d)
+      });
+    } else {
+      await sbFetch('/items?id=eq.' + encodeURIComponent(item.id), { method: 'PATCH', body: JSON.stringify(d) });
+    }
+  } catch (e) {
+    outboxAdd(old
+      ? { path: '/items?id=eq.' + encodeURIComponent(item.id), method: 'PATCH', body: JSON.stringify(d) }
+      : { path: '/items', method: 'POST', headers: { 'Prefer': 'resolution=merge-duplicates' }, body: JSON.stringify(d) });
   }
   SNAP[item.id] = JSON.stringify(body);
 }
 
+function diffBody(old, body) {
+  const d = {};
+  for (const k in body) if (JSON.stringify(body[k]) !== JSON.stringify(old[k])) d[k] = body[k];
+  return d;
+}
+
 async function deleteItemDb(id) {
   lastLocalWrite = Date.now();
-  await sbFetch(`/items?id=eq.${encodeURIComponent(id)}`, { method: 'DELETE' });
+  try {
+    await sbFetch(`/items?id=eq.${encodeURIComponent(id)}`, { method: 'DELETE' });
+  } catch (e) {
+    outboxAdd({ path: `/items?id=eq.${encodeURIComponent(id)}`, method: 'DELETE' });
+  }
+  delete SNAP[id];
 }
 
 // ===== ШИНА СОБЫТИЙ: ядро ничего не знает о модулях, модули подписываются в main.js =====
@@ -154,7 +256,7 @@ function applyRemoteExtra(table, type, rec, old) {
 }
 
 // ===== REALTIME (протокол Supabase Realtime v2) + запасной опрос =====
-let lastLocalWrite = 0, rtTimer = null;
+let lastLocalWrite = 0, rtTimer = null, rtRetry = 0;
 function applyRemote(type, rec, old) {
   if (type === 'DELETE') { const id = (old && old.id) || (rec && rec.id); if (id) { delete items[id]; delete SNAP[id]; } }
   else if (rec && rec.id) { const p = items[rec.id] || {}; items[rec.id] = extrasOn ? { ...rec, wants: p.wants || {}, reacts: p.reacts || {}, comments: p.comments || [] } : rec; SNAP[rec.id] = JSON.stringify(rec); }
@@ -162,8 +264,10 @@ function applyRemote(type, rec, old) {
 }
 function startRealtime() {
   if (realtimeChannel) return;
+  if (!SUPA_URL || !SUPA_KEY) return;
   const ws = new WebSocket(SUPA_URL.replace('https://', 'wss://') + '/realtime/v1/websocket?apikey=' + SUPA_KEY + '&vsn=1.0.0');
   ws.onopen = () => {
+    rtRetry = 0;
     ws.send(JSON.stringify({ topic: 'realtime:items-sync', event: 'phx_join', ref: '1', join_ref: '1',
       payload: { config: { broadcast: { ack: false, self: false }, presence: { key: '' }, postgres_changes: XTABLES.map(t => ({ event: '*', schema: 'public', table: t })), private: false }, access_token: SUPA_KEY } }));
     clearInterval(rtTimer);
@@ -182,7 +286,12 @@ function startRealtime() {
     } catch (err) {}
   };
   ws.onerror = () => { STAT.rt = 'ошибка'; setSyncState('error', 'ошибка соединения'); };
-  ws.onclose = () => { STAT.rt = 'переподключение'; realtimeChannel = null; clearInterval(rtTimer); setTimeout(startRealtime, 3000); };
+  // Экспоненциальный backoff с потолком 30 с: частые обрывы не должны долбить сервер
+  ws.onclose = () => {
+    STAT.rt = 'переподключение'; realtimeChannel = null; clearInterval(rtTimer);
+    const delay = Math.min(30000, 1000 * Math.pow(2, rtRetry++));
+    setTimeout(startRealtime, delay + Math.random() * 400);
+  };
   realtimeChannel = ws;
 }
 // Запасной путь, если realtime не включён или соединение молчит: обновляем список по таймеру и при возврате на вкладку.
@@ -203,6 +312,9 @@ addEventListener('online', () => { if (typeof authedNow === 'function' && authed
 // ===== INIT =====
 window.addEventListener('load', () => {
   loadCustom();
+
+  // без config.js работать нечем: показываем подсказку и не идём дальше
+  if (configMissing()) { lockApp(); showConfigError(); return; }
 
   // password gate
   if (isAuthed()) { unlockApp(); initApp(); }
@@ -291,89 +403,10 @@ function sortItems(arr) {
 }
 
 // ===== RENDER =====
-function render() {
-  renderTabs();
-  const list=document.getElementById('list');
-  let arr=Object.values(items).filter(i=>i.cat===currentTab);
-  if(currentFilter==='done') arr=arr.filter(i=>i.done);
-  else if(currentFilter==='todo') arr=arr.filter(i=>!i.done);
-  if(searchQuery) arr=arr.filter(i=>i.title.toLowerCase().includes(searchQuery)||(i.note||'').toLowerCase().includes(searchQuery));
-  arr=sortItems(arr);
-
-  getAllCats().forEach(cat=>{
-    const cnt=Object.values(items).filter(i=>i.cat===cat.id&&!i.done).length;
-    const el=document.getElementById('badge-'+cat.id); if(el){el.textContent=cnt;el.classList.toggle('show',cnt>0);}
-  });
-
-  const allCat=Object.values(items).filter(i=>i.cat===currentTab);
-  const doneCount=allCat.filter(i=>i.done).length;
-  const et=document.getElementById('stat-total'),ed=document.getElementById('stat-done'),el2=document.getElementById('stat-left');
-  if(et)et.textContent=allCat.length; if(ed)ed.textContent=doneCount; if(el2)el2.textContent=allCat.length-doneCount;
-
-  if(!arr.length){
-    const cats=getAllCats(); const cat=cats.find(c=>c.id===currentTab)||{};
-    const ico=C.icons&&C.icons[currentTab]?`<img src="${C.icons[currentTab]}" style="width:52px;height:52px;object-fit:cover;border-radius:12px;">`:(cat.icon||'📂');
-    list.innerHTML=`<div class="empty" style="grid-column:1/-1"><div class="empty-icon">${ico}</div><p>Список пуст.<br>Нажми <strong>+</strong> чтобы добавить!</p></div>`;
-    return;
-  }
-
-  const checkIc=C.icons&&C.icons.check, editIc=C.icons&&C.icons.edit, delIc=C.icons&&C.icons.del;
-  list.innerHTML=arr.map(item=>{
-    const checkContent=item.done?(checkIc?`<img src="${checkIc}">`:'✓'):'';
-    return `<div class="item${item.done?' done':''}">
-      <div class="check" onclick="toggleDone('${item.id}')">${checkContent}</div>
-      <div class="item-body">
-        <div class="item-title">${esc(item.title)}</div>
-        ${item.note?`<div class="item-meta">${esc(item.note)}</div>`:''}
-        ${item.link?`<a href="${esc(item.link)}" target="_blank" style="font-size:11px;color:var(--accent2);text-decoration:none;margin-top:3px;display:inline-block;">🔗 Открыть</a>`:''}
-      </div>
-      <div class="item-actions">
-        <button class="btn-icon" onclick="editItem('${item.id}')">${editIc?`<img src="${editIc}">`:'✏️'}</button>
-        <button class="btn-icon del" onclick="deleteItem('${item.id}')">${delIc?`<img src="${delIc}">`:'🗑️'}</button>
-      </div>
-    </div>`;
-  }).join('');
-
-  if(C.rgb.text&&rgbRaf)     document.querySelectorAll('.item-title').forEach(el=>el.style.color=`hsl(${rgbHue},${C.rgb.sat}%,${C.rgb.light}%)`);
-  if(C.rgb.metaText&&rgbRaf) document.querySelectorAll('.item-meta').forEach(el=>el.style.color=`hsl(${(rgbHue+40)%360},${C.rgb.sat}%,${C.rgb.light}%)`);
-}
+// Рендер, CRUD и форма живут в cards.js: он подключается позже и перекрывает ядро.
+// Здесь остаются только функции, которых нет в модулях: esc, rebuildCatSelect, закрытие модалки, категории.
 function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 
-// ===== CRUD =====
-async function toggleDone(id){
-  if(!items[id])return; items[id]={...items[id],done:!items[id].done}; render();
-  try{await upsertItem(items[id]);}catch(e){setSyncState('error','ошибка');}
-}
-async function deleteItem(id){
-  if(!items[id])return; delete items[id]; render();
-  try{await deleteItemDb(id);}catch(e){setSyncState('error','ошибка');}
-}
-function editItem(id){
-  const item=items[id]; if(!item)return;
-  editingId=id;
-  document.getElementById('modalTitle').textContent='Редактировать';
-  document.getElementById('inputTitle').value=item.title;
-  document.getElementById('inputNote').value=item.note||'';
-  document.getElementById('inputLink').value=item.link||'';
-  rebuildCatSelect(); document.getElementById('inputCat').value=item.cat;
-  document.getElementById('overlay').classList.add('open');
-  setTimeout(()=>document.getElementById('inputTitle').select(),50);
-}
-async function saveItem(){
-  const title=document.getElementById('inputTitle').value.trim();
-  if(!title){document.getElementById('inputTitle').focus();return;}
-  const note=document.getElementById('inputNote').value.trim();
-  const link=document.getElementById('inputLink').value.trim();
-  const cat=document.getElementById('inputCat')?.value||currentTab;
-  const btn=document.getElementById('saveBtn'); btn.disabled=true; btn.textContent='Сохраняем...';
-  let item;
-  if(editingId){ item={...items[editingId],title,note,link,cat}; }
-  else{ const id=Date.now().toString(36)+Math.random().toString(36).slice(2,6); item={id,cat,title,note,link,done:false,ts:Date.now()}; }
-  items[item.id]=item; render(); closeModal();
-  try{await upsertItem(item);setSyncState('live','сохранено');}
-  catch(e){setSyncState('error','ошибка сохранения');}
-  btn.disabled=false; btn.textContent='Сохранить';
-}
 function rebuildCatSelect(){
   const sel=document.getElementById('inputCat'); if(!sel)return;
   sel.innerHTML=getAllCats().map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
@@ -381,16 +414,6 @@ function rebuildCatSelect(){
 }
 
 // ===== MODAL =====
-function openModal(){
-  editingId=null;
-  document.getElementById('modalTitle').textContent='Добавить';
-  document.getElementById('inputTitle').value='';
-  document.getElementById('inputNote').value='';
-  document.getElementById('inputLink').value='';
-  rebuildCatSelect();
-  document.getElementById('overlay').classList.add('open');
-  setTimeout(()=>document.getElementById('inputTitle').focus(),100);
-}
 function closeModal(){document.getElementById('overlay').classList.remove('open');editingId=null;}
 function maybeClose(e){if(e.target===document.getElementById('overlay'))closeModal();}
 

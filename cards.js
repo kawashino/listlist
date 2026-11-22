@@ -7,8 +7,10 @@ function renderList(){
   if(curStatus!=='all')arr=arr.filter(i=>sOf(i)===curStatus);
   else if(currentFilter==='done')arr=arr.filter(i=>sOf(i)==='done');
   else if(currentFilter==='todo')arr=arr.filter(i=>sOf(i)!=='done');
-  if(searchQuery)arr=arr.filter(i=>(i.title+' '+(i.note||'')+' '+(i.tags||'')).toLowerCase().includes(searchQuery));
+  if(searchQuery)arr=arr.filter(i=>itemSearchScore(searchQuery,i)>0);
   if(curColl!=='all')arr=arr.filter(i=>i.coll===curColl);if(curFr!=='all')arr=all.filter(i=>i.franchise===curFr);arr=arr.filter(smartOk).filter(i=>showArch?i.archived:!i.archived);updFr();arr=sortItems(arr);updColl();
+  // при активном поиске релевантность важнее выбранной сортировки
+  if(searchQuery)arr.sort((a,b)=>itemSearchScore(searchQuery,b)-itemSearchScore(searchQuery,a));
   getAllCats().forEach(c=>{const n=all.filter(i=>i.cat===c.id&&sOf(i)!=='done').length,el=$('badge-'+c.id);if(el){el.textContent=n;el.classList.toggle('show',n>0);}});
   const cat=all.filter(i=>i.cat===currentTab),d=cat.filter(i=>sOf(i)==='done').length;
   [['stat-total',cat.length],['stat-done',d],['stat-left',cat.length-d]].forEach(([id,v])=>{const e=$(id);if(e)e.textContent=v;});
@@ -52,13 +54,36 @@ function openModal(){editingId=null;fillForm({});pasteLink(true);}
 
 function editItem(id){const i=items[id];if(!i)return;editingId=id;fillForm(i);}
 
+// ===== ПРОВЕРКА ФОРМЫ =====
+// Ловим то, что раньше уходило в базу молча: пустое название, битую ссылку, кривой постер и дубликаты.
+function validUrl(u) {
+  if (!u) return true;
+  if (/^https?:\/\/\S+$/i.test(u)) return true;
+  if (/^data:image\//i.test(u)) return true;
+  return false;
+}
+
+function validateItemForm({ title, link, poster, cat, id }) {
+  if (!title) return 'Введи название';
+  if (title.length < 2) return 'Название слишком короткое (минимум 2 символа)';
+  if (link && !validUrl(link)) return 'Ссылка должна начинаться с http:// или https://';
+  if (poster && !validUrl(poster)) return 'Постер должен быть ссылкой на картинку (http/https)';
+
+  const dup = Object.values(items).find(i => i.id !== id && i.cat === cat && String(i.title || '').trim().toLowerCase() === title.toLowerCase());
+  if (dup && !confirm(`Такая карточка уже есть: «${dup.title}». Всё равно сохранить?`)) return '__cancel__';
+  return '';
+}
+
 async function saveItem(){
   await resolveTitleLink();
-  const title=$('inputTitle').value.trim();if(!title){$('inputTitle').focus();return;}
-  const old=editingId?items[editingId]:null,st=$('fStatus').value,rate=parseFloat($('fRating').value)||0,cat=$('inputCat').value||currentTab;
+  const title=$('inputTitle').value.trim(), link=$('inputLink').value.trim();
+  const poster0=$('fPoster').value.trim(), cat=$('inputCat').value||currentTab;
+  const problem=validateItemForm({title,link,poster:poster0,cat,id:editingId});
+  if(problem){ if(problem==='__cancel__')return; toast(problem); $('inputTitle').focus(); return; }
+  const old=editingId?items[editingId]:null,st=$('fStatus').value,rate=parseFloat($('fRating').value)||0;
   const ratings={...(old&&old.ratings||{})};if(rate>0)ratings[ME]=rate;else delete ratings[ME];
   const btn=$('saveBtn');btn.disabled=true;btn.textContent='Сохраняем...';
-  let poster=$('fPoster').value.trim();
+  let poster=poster0;
   if(!poster)poster=await findPoster(title,cat);
   const base=old||{id:Date.now().toString(36)+Math.random().toString(36).slice(2,6),ts:Date.now(),added_by:ME};
   const item={...base,cat,title,note:$('inputNote').value.trim(),link:$('inputLink').value.trim(),status:st,done:st==='done',

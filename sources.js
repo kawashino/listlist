@@ -41,7 +41,30 @@ async function candsStd(q,cat){
   return out;
 }
 
-async function lookup(i){const b=(await cands(i.title,i.cat))[0]||{};return{ts:1,poster:b.poster||'',year:b.year||'',genres:b.genres||'',desc:b.desc||'',score:b.score||'',eps:b.eps||0,trailer:b.trailer||''};}
+// ===== КЭШ СПРАВОЧНЫХ ДАННЫХ =====
+// lookup() дёргает 2–3 внешних API; без кэша одно и то же название ищется заново при каждом открытии формы.
+const PCACHE_KEY = 'wl_pcache', PCACHE_TTL = 24 * 60 * 60 * 1000, PCACHE_MAX = 400;
+function pcacheAll() { try { return JSON.parse(localStorage.getItem(PCACHE_KEY) || '{}'); } catch (e) { return {}; } }
+function pcacheGet(q, cat) {
+  const e = pcacheAll()[(cat || '') + '|' + String(q).toLowerCase()];
+  return e && Date.now() - e.ts < PCACHE_TTL ? e.v : null;
+}
+function pcacheSet(q, cat, v) {
+  const c = pcacheAll(), k = (cat || '') + '|' + String(q).toLowerCase();
+  c[k] = { ts: Date.now(), v };
+  const keys = Object.keys(c);
+  if (keys.length > PCACHE_MAX) keys.slice(0, keys.length - PCACHE_MAX).forEach(x => delete c[x]);
+  try { localStorage.setItem(PCACHE_KEY, JSON.stringify(c)); } catch (e) {}
+}
+
+async function lookup(i){
+  const hit = pcacheGet(i.title, i.cat);
+  if (hit) return hit;
+  const b = (await cands(i.title, i.cat))[0] || {};
+  const out = { ts:1, poster:b.poster||'', year:b.year||'', genres:b.genres||'', desc:b.desc||'', score:b.score||'', eps:b.eps||0, trailer:b.trailer||'' };
+  pcacheSet(i.title, i.cat, out);
+  return out;
+}
 
 async function findPoster(q,cat){return(await lookup({title:q,cat})).poster;}
 

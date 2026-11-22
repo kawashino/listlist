@@ -192,28 +192,8 @@ function renderIconPreviews(){
   }).join('');
 }
 
-function loadIcon(inp,key){
-  const f=inp.files[0]; if(!f)return;
-  const reader=new FileReader();
-  reader.onload=e=>{ C.icons[key]=e.target.result; saveCustom(); applyAllIcons(); };
-  reader.readAsDataURL(f);
-}
+// loadIcon живёт в theme.js: там картинка сжимается перед сохранением, здесь была устаревшая версия.
 function resetIcon(key){ C.icons[key]=null; saveCustom(); applyAllIcons(); }
-
-// ===== CUSTOM CATS =====
-function addCustomCat(){
-  const inp=document.getElementById('newCatName'), ico=document.getElementById('newCatIcon');
-  const name=(inp.value||'').trim(); if(!name)return;
-  const id='cat_'+Date.now();
-  C.customCats.push({id,name,icon:ico.value||'📂'});
-  inp.value=''; ico.value='📂';
-  saveCustom(); renderTabs(); renderIconPreviews();
-}
-function removeCustomCat(id){
-  C.customCats=C.customCats.filter(c=>c.id!==id);
-  if(window.currentTab===id) window.currentTab='anime';
-  saveCustom(); renderTabs(); render();
-}
 
 // ===== BG POSITION PAD =====
 function initBgPosPad(){
@@ -298,7 +278,7 @@ function setTabColor(cat,v){ C['tab'+cat.charAt(0).toUpperCase()+cat.slice(1)]=v
 function toggleShowStats(v){ C.showStats=v; applyCustom(); saveCustom(); }
 function toggleShowSearch(v){ C.showSearch=v; applyCustom(); saveCustom(); }
 
-function loadBg(inp){ const f=inp.files[0]; if(!f)return; const r=new FileReader(); r.onload=e=>{C.bg=e.target.result;C.bgGrad=false;document.getElementById('bgGradToggle').checked=false;saveCustom();applyBg();}; r.readAsDataURL(f); }
+// loadBg живёт в theme.js: он загружает файл в хранилище Supabase, а не в data:-URL.
 function removeBg(){ C.bg=null; saveCustom(); applyBg(); }
 
 // ===== CUSTOM PANEL TABS =====

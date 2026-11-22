@@ -6,7 +6,14 @@ addEventListener('beforeinstallprompt',e=>{e.preventDefault();dip=e;});
 
 function installApp(){if(dip){dip.prompt();dip=null;}else toast('Chrome: меню ⋮ → «Установить приложение»');}
 
-function exportData(){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(Object.values(items),null,1)],{type:'application/json'}));a.download='watchlist-backup.json';a.click();}
+function exportData(){
+  const data={app:'listlist',v:2,ts:Date.now(),items:Object.values(items)};
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([JSON.stringify(data,null,1)],{type:'application/json'}));
+  a.download='listlist-backup-'+new Date().toISOString().slice(0,10)+'.json';
+  a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),2000);
+}
 
 function switchMe(){ME='';localStorage.removeItem('wl_me');ensureMe();$('meName').textContent=ME;render();}
 
@@ -25,7 +32,26 @@ function night(){
 }
 
 async function doImport(){
-  let t=$('impText').value;const f=$('impFile').files[0];if(f)t=await f.text();let L=[];
+  let t=$('impText').value;const f=$('impFile').files[0];if(f)t=await f.text();
+
+  // Резервная копия listlist (JSON): массив либо {app:'listlist',items:[…]}
+  if(/^[\[{]/.test(t.trim())){
+    let d;try{d=JSON.parse(t);}catch(e){toast('Не удалось прочитать JSON');return;}
+    const L=Array.isArray(d)?d:(d&&d.items)||[];
+    if(!L.length){toast('В файле нет карточек');return;}
+    if(!confirm(`Восстановить ${L.length} карточек? Существующие с теми же id будут перезаписаны.`))return;
+    let n=0;
+    for(const x of L){
+      if(!x||!x.title)continue;
+      const it={...x,id:x.id||Date.now().toString(36)+n.toString(36)+Math.random().toString(36).slice(2,5)};
+      items[it.id]=it;n++;
+      try{await upsertItem(it);}catch(e){}
+    }
+    render();$('imp').classList.remove('open');$('impText').value='';
+    toast('Восстановлено: '+n);return;
+  }
+
+  let L=[];
   if(t.trim().startsWith('<')){const st={Completed:'done',Watching:'watching','On-Hold':'later',Dropped:'dropped'};L=[...new DOMParser().parseFromString(t,'text/xml').querySelectorAll('anime')].map(a=>({t:a.querySelector('series_title')?.textContent,c:'anime',s:st[a.querySelector('my_status')?.textContent]||'want'}));}
   else{const R=t.split(/\r?\n/).map(x=>x.trim()).filter(Boolean),sp=l=>[...l.matchAll(/"([^"]*)"|([^,]+)/g)].map(m=>m[1]??m[2]);
     if(R[0]&&R[0].includes(',')&&/name/i.test(R[0])){const k=sp(R[0]).findIndex(x=>/^name$/i.test(x));L=R.slice(1).map(l=>({t:sp(l)[k],c:currentTab,s:'done'}));}
@@ -37,11 +63,25 @@ async function doImport(){
   try{await sbFetch('/items',{method:'POST',headers:{Prefer:'resolution=merge-duplicates'},body:JSON.stringify(rows)});toast('Добавлено: '+rows.length);}catch(e){toast('Ошибка импорта');}
 }
 
+// ===== ГОРЯЧИЕ КЛАВИШИ =====
+// Одиночные клавиши работают только вне полей ввода; Ctrl/Cmd — везде.
 addEventListener('keydown',e=>{
-  if(/INPUT|TEXTAREA|SELECT/.test(e.target.tagName)||e.ctrlKey||e.metaKey||e.altKey)return;const k=e.key.toLowerCase();
+  const inField=/INPUT|TEXTAREA|SELECT/.test(e.target.tagName),mod=e.ctrlKey||e.metaKey,k=e.key.toLowerCase();
+  if(mod&&e.key==='Enter'){const ov=$('overlay');if(ov&&ov.classList.contains('open')){e.preventDefault();saveItem();}return;}
+  if(mod&&k==='k'){e.preventDefault();$('searchInput').focus();$('searchInput').select();return;}
+  if(inField||mod||e.altKey)return;
   if(k==='n'){e.preventDefault();openModal();}else if(k==='/'){e.preventDefault();$('searchInput').focus();}else if(k==='r')roulette();else if(k==='s')stats();else if(k==='f')$('flt').classList.add('open');
+  else if(k==='?')showShortcuts();
   else if(k==='escape')document.querySelectorAll('.overlay.open').forEach(o=>o.classList.remove('open'));
 });
+
+function showShortcuts(){
+  const rows=[['N','Добавить карточку'],['/ или Ctrl+K','Поиск'],['Ctrl+Enter','Сохранить в форме'],['R','Рулетка «что смотрим»'],['S','Статистика'],['F','Умные фильтры'],['T','Экран «Сегодня»'],['?','Эта подсказка'],['Esc','Закрыть окно']];
+  if(!$('keys'))document.body.insertAdjacentHTML('beforeend','<div id="keys" class="overlay" onclick="if(event.target===this)this.classList.remove(\'open\')"><div class="modal" id="keysBody"></div></div>');
+  $('keysBody').innerHTML='<div class="modal-title">⌨️ Горячие клавиши</div>'+rows.map(([k,v])=>`<div class="br"><span style="width:130px;flex:none"><b>${esc(k)}</b></span><span>${esc(v)}</span></div>`).join('')
+    +'<div class="btn-row"><button class="btn btn-primary" onclick="$(\'keys\').classList.remove(\'open\')">Понятно</button></div>';
+  $('keys').classList.add('open');
+}
 
 async function usage(silent){
   const el=$('usage');if(!silent)el.textContent='Считаю…';let bytes=0,n=0;

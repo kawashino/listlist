@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Генератор хеша пароля</title>
+<style>
+  :root { color-scheme: dark; }
+  body { margin:0; min-height:100vh; display:flex; align-items:center; justify-content:center;
+         background:#0d0f1a; color:#e8eaf6; font:15px/1.5 "Inter",system-ui,sans-serif; padding:20px; }
+  .box { width:100%; max-width:460px; background:#1e2340; border:1px solid #2d3358; border-radius:14px; padding:22px; }
+  h1 { font-size:17px; margin:0 0 4px; }
+  p  { color:#9095b5; font-size:13px; margin:0 0 16px; }
+  label { display:block; font-size:13px; color:#9095b5; margin:12px 0 4px; }
+  input { width:100%; box-sizing:border-box; padding:10px 12px; background:#0d0f1a; border:1px solid #2d3358;
+          border-radius:9px; color:#e8eaf6; font:inherit; }
+  input:focus { outline:none; border-color:#7c5cfc; }
+  button { margin-top:14px; width:100%; padding:11px; border:0; border-radius:9px; background:#7c5cfc;
+           color:#fff; font:600 14px inherit; cursor:pointer; }
+  button:active { transform:translateY(1px); }
+  .out { margin-top:14px; font-family:"Fira Code",monospace; font-size:12px; word-break:break-all;
+         background:#0d0f1a; border:1px solid #2d3358; border-radius:9px; padding:10px; min-height:20px; color:#9095b5; }
+  .ok { color:#22c55e; }
+  .row { display:flex; gap:8px; align-items:flex-end; }
+  .row > div { flex:1; }
+</style>
+</head>
+<body>
+<div class="box">
+  <h1>🔑 Генератор хеша пароля</h1>
+  <p>Соль и число итераций читаются из <code>config.js</code> — хеш считается ровно как в приложении. Смена соли обнулит вход на всех устройствах.</p>
+
+  <div class="row">
+    <div><label for="salt">Соль (PW_SALT)</label><input id="salt" spellcheck="false"></div>
+    <div style="flex:0 0 110px"><label for="iter">Итерации</label><input id="iter" type="number" min="1000" step="1000"></div>
+  </div>
+
+  <label for="pw">Пароль</label>
+  <input id="pw" type="password" placeholder="Введи пароль" autocomplete="new-password">
+
+  <button id="genBtn">Сгенерировать</button>
+
+  <label>Результат — вставь в <code>config.js</code> → <code>PW_HASH</code></label>
+  <div class="out" id="out">хеш появится здесь</div>
+</div>
+
+<!-- config.js не в репозитории; если его нет, генератор предупредит и возьмёт значения по умолчанию -->
+<script src="config.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+
+//config.js лежит рядом и содержит рабочие PW_SALT/PW_ITER — берём их, чтобы хеш совпал с приложением
+const CFG = window.WL_CONFIG || null;
+$('salt').value = CFG?.PW_SALT || 'wl-0123456789abcdef';
+$('iter').value = CFG?.PW_ITER || 150000;
+if (!CFG) {
+  const note = document.createElement('p');
+  note.style.color = '#f97316';
+  note.textContent = 'config.js не найден: используются значения по умолчанию, хеш не подойдёт к приложению.';
+  document.querySelector('.box').prepend(note);
+}
+
+async function hashPw(pw, salt, iter) {
+  const enc = new TextEncoder();
+  const key = await crypto.subtle.importKey('raw', enc.encode(pw), 'PBKDF2', false, ['deriveBits']);
+  const bits = await crypto.subtle.deriveBits(
+    { name: 'PBKDF2', salt: enc.encode(salt), iterations: iter, hash: 'SHA-256' }, key, 256);
+  return [...new Uint8Array(bits)].map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+$('genBtn').addEventListener('click', async () => {
+  const pw = $('pw').value, salt = $('salt').value.trim(), iter = +$('iter').value;
+  const out = $('out'), btn = $('genBtn');
+  if (!pw || !salt || iter < 1000) { out.textContent = 'Заполни пароль, соль и итерации'; out.className = 'out'; return; }
+  btn.disabled = true; out.className = 'out'; out.textContent = 'Считаю…';
+  try {
+    const h = await hashPw(pw, salt, iter);
+    out.textContent = h; out.className = 'out ok';
+    if (CFG && h === CFG.PW_HASH) out.textContent += '  ← совпадает с текущим config.js';
+  } catch (e) {
+    out.textContent = 'Ошибка: ' + e.message; out.className = 'out';
+  }
+  btn.disabled = false;
+});
+
+// Ctrl/Cmd+Enter — посчитать
+addEventListener('keydown', e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) $('genBtn').click(); });
+</script>
+</body>
+</html>
