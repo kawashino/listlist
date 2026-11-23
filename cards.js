@@ -364,7 +364,7 @@ let hoverT=null,hoverEl=null;
 function hideHover(){const b=$('hover');if(b)b.classList.remove('show');hoverEl=null;}
 
 function hoverShow(el){
-  if(!canHover())return;
+  if(!canHover()||!el)return;
   const i=items[el.dataset.id];if(!i)return;
   let box=$('hover');
   if(!box){document.body.insertAdjacentHTML('beforeend','<div id="hover" class="hover-card"></div>');box=$('hover');}
@@ -405,6 +405,7 @@ async function trTags(){
 document.addEventListener('mouseover',e=>{
   if(!canHover())return;
   const el=e.target.closest?e.target.closest('.item[data-id],.trow[data-id]'):null;
+  if(!el||el===hoverEl)return;
   if(hoverEl&&hoverEl.contains(e.relatedTarget))return;
   hoverEl=el;clearTimeout(hoverT);
   hoverT=setTimeout(()=>hoverShow(el),280);
