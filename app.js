@@ -233,7 +233,7 @@ const STAT = { fetch: 0, rt: 'нет', rtAt: 0 };   // для экрана «С�
 
 // ===== КОММЕНТАРИИ, РЕАКЦИИ, «ХОЧУ»: отдельные таблицы, каждая запись независима, поэтому правки двоих не затирают друг друга =====
 let extrasOn = false;                              // true, когда таблицы item_wants / item_reacts / item_comments созданы
-const XKEYS = ['wants', 'reacts', 'comments', 'titleRu', 'titleEn', 'titleOrig'];
+const XKEYS = ['wants', 'reacts', 'comments'];
 const XTABLES = ['items', 'item_wants', 'item_reacts', 'item_comments'];
 async function xtAdd(table, row) { await sbFetch('/' + table, { method: 'POST', headers: { Prefer: 'resolution=ignore-duplicates' }, body: JSON.stringify(row) }); }
 async function xtDel(table, q) { await sbFetch('/' + table + '?' + q, { method: 'DELETE' }); }

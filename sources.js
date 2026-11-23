@@ -226,43 +226,6 @@ async function lookup(i){
   const top=ranked.slice(0,3).map(x=>x.c);
   const first=ranked.length?ranked[0].c:{};
 
-  // Для фильмов и сериалов пробуем альтернативные названия (русское → английское → оригинальное),
-  // если основной поиск не дал результата с постером/описанием.
-  let altUsed='';
-  if((i.cat==='films'||i.cat==='series')&&(!first.poster||!first.desc)){
-    const alt=[i.titleRu||'',i.titleEn||'',i.titleOrig||''].filter(Boolean).map(normTitle);
-    for(const aq of alt){
-      if(!aq||aq===q)continue;
-      const ra=await cands(aq,i.cat);
-      if(!ra.length)continue;
-      const rankedAlt=ra.map(c=>({c,s:scoreCand(c,aq)})).sort((a,b)=>b.s-a.s);
-      const topAlt=rankedAlt.slice(0,3).map(x=>x.c);
-      const firstAlt=rankedAlt.length?rankedAlt[0].c:{};
-      // Берём альтернативу, если она дала постер или описание, а основное нет
-      if(firstAlt.poster||firstAlt.desc){
-        const merged=[...top,...topAlt].filter((v,k,a)=>a.findIndex(x=>x&&x.title===v.title&&x._src===v._src)===k);
-        const rankedM=merged.map(c=>({c,s:scoreCand(c,q)})).sort((a,b)=>b.s-a.s);
-        const topM=rankedM.slice(0,3).map(x=>x.c);
-        const firstM=rankedM.length?rankedM[0].c:{};
-        const out={
-          ts:1,
-          poster:await pickPoster(topM),
-          year:firstM.year||first.year||'',
-          genres:mergeGenres(topM.map(c=>c.genres||[])),
-          desc:pickLongestDesc(topM),
-          score:firstM.score||first.score||'',
-          eps:Math.max(0,...topM.map(c=>+c.eps||0)),
-          trailer:topM.map(c=>c.trailer).find(Boolean)||first.trailer||'',
-          franchise:franchiseFrom(merged),
-          upd:Date.now()
-        };
-        pcacheSet(i.title,i.cat,out);
-        return out;
-      }
-    }
-    altUsed=alt.join(' / ');
-  }
-
   const out={
     ts:1,
     poster:await pickPoster(top),
@@ -377,15 +340,6 @@ function takePick(k){
   if(!$('fTotal').value&&x.eps)$('fTotal').value=x.eps;
   if(x.cat)$('inputCat').value=x.cat;
   if(x.url&&!$('inputLink').value)$('inputLink').value=x.url;
-  // Автозаполнение полей названий по алфавиту picked-кандидата (для фильмов/сериалов)
-  const cat=$('inputCat').value||currentTab;
-  if((cat==='films'||cat==='series')&&x.title){
-    const isCyr=/[а-яё]/i.test(x.title);
-    const isLat=/[a-z]/i.test(x.title);
-    if(isCyr&&!$('inputTitleRu').value.trim())$('inputTitleRu').value=x.title;
-    if(isLat&&!$('inputTitleEn').value.trim())$('inputTitleEn').value=x.title;
-    if(!isCyr&&!isLat&&!$('inputTitleOrig').value.trim())$('inputTitleOrig').value=x.title;
-  }
   const fr=$('fFr');
   if(fr&&!fr.value.trim()&&x.franchise)fr.value=x.franchise;
   $('sug').innerHTML='';
@@ -426,7 +380,10 @@ async function wdItem(qid){
   const cl=e.claims||{},val=p=>cl[p]&&cl[p][0]&&cl[p][0].mainsnak&&cl[p][0].mainsnak.datavalue&&cl[p][0].mainsnak.datavalue.value,ids=p=>(cl[p]||[]).map(x=>x.mainsnak&&x.mainsnak.datavalue&&x.mainsnak.datavalue.value&&x.mainsnak.datavalue.value.id).filter(Boolean);
   const num=p=>{const v=val(p);return v&&v.amount?+v.amount:0},eps=num('P1113'),seasons=num('P2437'),img=val('P3383')||val('P18'),date=(val('P577')||{}).time||'';
   const anime=ids('P136').includes('Q1107')||ids('P31').some(x=>['Q63952888','Q100269041'].includes(x));
-  return{title:(e.labels.ru||e.labels.en||{}).value||'',desc:(e.descriptions.ru||e.descriptions.en||{}).value||'',eps,seasons,year:date.slice(1,5),
+  let genres=[];
+  const gid=ids('P136');
+  if(gid.length){try{const gd=await J(`https://www.wikidata.org/w/api.php?action=wbgetentities&ids=${gid.join('|')}&props=labels&languages=ru|en&format=json&origin=*`);genres=Object.values(gd.entities||{}).map(x=>(x.labels&&(x.labels.ru||x.labels.en))?(x.labels.ru||x.labels.en).value:'').filter(Boolean);}catch(e){}}
+  return{title:(e.labels.ru||e.labels.en||{}).value||'',desc:(e.descriptions.ru||e.descriptions.en||{}).value||'',eps,seasons,year:date.slice(1,5),genres,
     poster:img?`https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(img)}?width=300`:'',
     cat:anime?'anime':(eps||seasons||ids('P31').includes('Q5398426'))?'series':'films'};
 }

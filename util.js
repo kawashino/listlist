@@ -4,9 +4,6 @@ const ST={want:'🕒 Хочу',watching:'▶️ Смотрю',done:'✅ Посм
 
 const EP=['anime','series','manga'];
 
-const isCyr=s=>/[а-яё]/i.test(String(s||''));
-const isLat=s=>/[a-z]/i.test(String(s||''));
-
 let ME=localStorage.getItem('wl_me')||'',curStatus='all';
 
 const FX=()=>C.fx||(C.fx={type:'none',n:60,speed:1,trail:false,sound:false});

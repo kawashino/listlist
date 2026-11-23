@@ -38,7 +38,7 @@ function renderList(){
       <div class="check" onclick="toggleDone('${i.id}')">${st==='done'?(ic.check?`<img src="${ic.check}">`:'✓'):''}</div>
       <div class="item-body"><div class="item-title" style="cursor:pointer" onclick="openInfo('${i.id}')">${esc(i.title)}</div>
         ${i.note?`<div class="item-meta">${esc(i.note)}</div>`:''}
-        <div class="chips"><span class="stb" onclick="cycleStatus('${i.id}')">${ST[st]}</span><span class="stb" onclick="toggleWant('${i.id}')">${w.length?'💗 '+w.map(esc).join(', '):'🤍 хочу'}</span>${i.coll?'<span class="tg">📁 '+esc(i.coll)+'</span>':''}${i.franchise?`<span class="tg" style="cursor:pointer" data-f="${esc(i.franchise)}" onclick="setFr(this.dataset.f)">🔗 ${esc(i.franchise)} ${frProg(i.franchise)}</span>`:''}${i.fear?`<span>${'💀'.repeat(i.fear)}</span>`:''}${i.scary?'<span>😱 скримеры</span>':''}${prog}${rs?`<span class="rt">⭐ ${rs}</span>`:''}${i.added_by?`<span>+${esc(i.added_by)}</span>`:''}</div>
+        <div class="chips"><span class="stb" onclick="cycleStatus('${i.id}')">${ST[st]}</span><span class="stb" onclick="toggleWant('${i.id}')">${w.length?'💗 '+w.map(esc).join(', '):'🤍 хочу'}</span>${i.coll?'<span class="tg">📁 '+esc(i.coll)+'</span>':''}${i.franchise?`<span class="tg" style="cursor:pointer" data-f="${esc(i.franchise)}" onclick="setFr(this.dataset.f)">🔗 ${esc(i.franchise)} ${frProg(i.franchise)}</span>`:''}${prog}${rs?`<span class="rt">⭐ ${rs}</span>`:''}${i.added_by?`<span>+${esc(i.added_by)}</span>`:''}</div>
         ${gs||tags?`<div class="chips">${gs}${gs&&tags?'<span class="tg-sep"></span>':''}${tags}</div>`:''}
         ${i.link?`<a href="${esc(i.link)}" target="_blank" style="font-size:11px;color:var(--accent2);text-decoration:none">🔗 Открыть</a>`:''}
       </div>
@@ -145,18 +145,11 @@ function cycleStatus(id){const k=Object.keys(ST);setStatus(id,k[(k.indexOf(sOf(i
 function fillForm(i){
   const v=(id,x)=>$(id).value=x??'';
   $('modalTitle').textContent=i.id?'Редактировать':'Добавить';
-  v('inputTitle',i.title);v('inputTitleRu',i.titleRu);v('inputTitleEn',i.titleEn);v('inputTitleOrig',i.titleOrig);
-  v('inputNote',i.note);v('inputLink',i.link);
+  v('inputTitle',i.title);v('inputNote',i.note);v('inputLink',i.link);
   rebuildCatSelect();$('inputCat').value=i.cat||currentTab;
-  toggleTitleFields($('inputCat').value||currentTab);
   v('fStatus',sOf(i));v('fSeason',i.season||'');v('fEpisode',i.episode||'');v('fTotal',i.total||'');
   v('fRating',(i.ratings||{})[ME]||'');v('fTags',i.tags);v('fPoster',i.poster);v('fColl',i.coll);_pick=null;$('sug').innerHTML='';v('fFr',i.franchise);
   $('overlay').classList.add('open');setTimeout(()=>$('inputTitle').focus(),80);
-}
-
-function toggleTitleFields(cat){
-  const show=cat==='films'||cat==='series';
-  for(const id of ['fTitleRu','fTitleEn','fTitleOrig'])$(id).style.display=show?'':'none';
 }
 
 function openModal(){editingId=null;fillForm({});pasteLink(true);if(innerWidth>=900)$('overlay').classList.add('modal-2col');else $('overlay').classList.remove('modal-2col');}
@@ -186,9 +179,6 @@ function validateItemForm({ title, link, poster, cat, id }) {
 async function saveItem(){
   await resolveTitleLink();
   const title=$('inputTitle').value.trim(), link=$('inputLink').value.trim();
-  const titleRu=$('inputTitleRu')?$('inputTitleRu').value.trim():'';
-  const titleEn=$('inputTitleEn')?$('inputTitleEn').value.trim():'';
-  const titleOrig=$('inputTitleOrig')?$('inputTitleOrig').value.trim():'';
   const poster0=$('fPoster').value.trim(), cat=$('inputCat').value||currentTab;
   const problem=validateItemForm({title,link,poster:poster0,cat,id:editingId});
   if(problem){ if(problem==='__cancel__')return; toast(problem); $('inputTitle').focus(); return; }
@@ -199,11 +189,6 @@ async function saveItem(){
     try{linkInfo=await fromLink(link);}catch(e){}
     if(linkInfo){
       if(!title)title=linkInfo.title;
-      if((cat==='films'||cat==='series')){
-        if(!titleRu&&isCyr(linkInfo.title))titleRu=linkInfo.title;
-        if(!titleEn&&isLat(linkInfo.title))titleEn=linkInfo.title;
-        if(!titleOrig&&!isCyr(linkInfo.title)&&!isLat(linkInfo.title))titleOrig=linkInfo.title;
-      }
       if(!poster0&&linkInfo.poster)poster0=linkInfo.poster;
       _pick=linkInfo;
     }
@@ -216,7 +201,7 @@ async function saveItem(){
   if(!poster)poster=await findPoster(title,cat);
   const base=old||{id:Date.now().toString(36)+Math.random().toString(36).slice(2,6),ts:Date.now(),added_by:ME};
   const genres=_pick&&_pick.genres?_pick.genres:[];
-  const item={...base,cat,title,titleRu,titleEn,titleOrig,note:$('inputNote').value.trim(),link:$('inputLink').value.trim(),status:st,done:st==='done',
+  const item={...base,cat,title,note:$('inputNote').value.trim(),link:$('inputLink').value.trim(),status:st,done:st==='done',
     season:+$('fSeason').value||0,episode:+$('fEpisode').value||0,total:+$('fTotal').value||0,ratings,tags:$('fTags').value.trim(),poster,
     coll:$('fColl').value.trim(),
     franchise:$('fFr').value.trim()||(_pick&&_pick.franchise)||'',
@@ -262,13 +247,12 @@ function bump(id){const i=items[id],S=i.season||1,seen={...(i.seen||{})},a=new S
 function smartOk(i){
   const f=SF,y=+i.info?.year||0,g=genresText(i).toLowerCase();
   if(f.r&&avgR(i)<f.r)return false;if(f.y1&&(!y||y<f.y1))return false;if(f.y2&&(!y||y>f.y2))return false;
-  if(f.g&&!g.includes(f.g))return false;if(f.t&&!(i.tags||'').toLowerCase().includes(f.t))return false;
-  if(f.f&&(i.fear||0)<f.f)return false;if(f.s==='1'&&!i.scary)return false;if(f.s==='0'&&i.scary)return false;return true;
+  if(f.g&&!g.includes(f.g))return false;if(f.t&&!(i.tags||'').toLowerCase().includes(f.t))return false;return true;
 }
 
-function readFlt(){SF={r:+$('sfR').value||0,y1:+$('sfY1').value||0,y2:+$('sfY2').value||0,g:$('sfG').value.trim().toLowerCase(),t:$('sfT').value.trim().toLowerCase(),f:+$('sfF').value||0,s:$('sfS').value};}
+function readFlt(){SF={r:+$('sfR').value||0,y1:+$('sfY1').value||0,y2:+$('sfY2').value||0,g:$('sfG').value.trim().toLowerCase(),t:$('sfT').value.trim().toLowerCase()};}
 
-function writeFlt(){$('sfR').value=SF.r||'';$('sfY1').value=SF.y1||'';$('sfY2').value=SF.y2||'';$('sfG').value=SF.g||'';$('sfT').value=SF.t||'';$('sfF').value=SF.f||'';$('sfS').value=SF.s||'';}
+function writeFlt(){$('sfR').value=SF.r||'';$('sfY1').value=SF.y1||'';$('sfY2').value=SF.y2||'';$('sfG').value=SF.g||'';$('sfT').value=SF.t||'';}
 
 function applyFlt(){readFlt();$('flt').classList.remove('open');render();$('fltBtn').style.outline=Object.values(SF).some(Boolean)?'2px solid var(--accent)':'';}
 
@@ -351,8 +335,7 @@ document.querySelector('.toolbar').insertAdjacentHTML('beforeend','<select id="f
 uiStep(310, () => {
 document.body.insertAdjacentHTML('beforeend',`<div id="flt" class="overlay" onclick="if(event.target===this)this.classList.remove('open')"><div class="modal"><div class="modal-title">🔎 Умные фильтры</div>
    <div class="field row3"><div><label>Оценка от</label><input id="sfR" type="number" min="0" max="10" step=".5"></div><div><label>Год от</label><input id="sfY1" type="number"></div><div><label>Год до</label><input id="sfY2" type="number"></div></div>
-   <div class="field row3"><div><label>Жанр</label><input id="sfG"></div><div><label>Тег</label><input id="sfT"></div><div><label>Страх от (0–5)</label><input id="sfF" type="number" min="0" max="5"></div></div>
-   <div class="field"><label>Скримеры</label><select id="sfS"><option value="">неважно</option><option value="1">есть</option><option value="0">нет</option></select></div>
+   <div class="field row3"><div><label>Жанр</label><input id="sfG"></div><div><label>Тег</label><input id="sfT"></div></div>
    <div id="views" class="chips"></div>
    <div class="btn-row"><button class="btn btn-secondary" onclick="resetFlt()">Сбросить</button><button class="btn btn-secondary" onclick="saveView()">💾 Вид</button><button class="btn btn-primary" onclick="applyFlt()">Применить</button></div></div></div>`);
 });

@@ -51,7 +51,6 @@ function drawInfoMain(){
   $('infoBody').innerHTML=`<div style="display:flex;gap:12px">${pic?`<img class="poster" style="width:90px;height:128px" src="${esc(pic)}">`:''}<div><div style="display:flex;align-items:center;gap:8px"><h3 style="margin:0">${esc(i.title)}</h3><button class="upload-btn" onclick="refreshItemInfo('${i.id}')" title="Обновить постер, описание, жанры, франшизу">🔄</button></div><div class="chips">${f.year?`<span>${esc(f.year)}</span>`:''}${gs.map(g=>`<span class="tg">${esc(g)}</span>`).join('')}${f.score?`<span class="rt">⭐ ${esc(f.score)}</span>`:''}</div></div></div>
   ${f.desc?`<p class="info-desc" style="font-size:13px;color:var(--text2);line-height:1.5;max-height:140px;overflow:auto">${esc(f.desc)}</p>`:(f.ts?'':'<p style="color:var(--text3)">Загружаю описание…</p>')}
   ${f.trailer?`<div id="trl"><button class="upload-btn" onclick="showTrl()">▶️ Трейлер</button></div>`:''}
-  <div class="cr" style="margin:10px 0"><span class="cl">Дата просмотра</span><input type="date" value="${esc(i.watched_on||'')}" onchange="patch('${i.id}',{watched_on:this.value})"><label style="font-size:12px"><input type="checkbox" ${i.together?'checked':''} onchange="patch('${i.id}',{together:this.checked})"> вместе</label></div>
   <div class="chips">${['👍','😂','😱','😢','🔥'].map(e=>{const n=rc[e]||[];return `<span class="stb" style="${n.includes(ME)?'outline:1px solid var(--accent)':''}" onclick="react('${i.id}','${e}')">${e} ${n.length||''}</span>`;}).join('')}</div>
   <div style="margin:10px 0">${(i.comments||[]).map(c=>`<div style="font-size:12px;margin:4px 0"><b>${esc(c.by)}:</b> ${esc(c.text)}</div>`).join('')}</div>
   <div class="cr"><input id="cmt" class="cp-select" placeholder="Комментарий…" onkeydown="if(event.key==='Enter')addCmt()"><button class="upload-btn" onclick="addCmt()">➤</button></div>`;
@@ -87,7 +86,7 @@ function stats(){
   getAllCats().forEach(c=>cats[c.name]=done.filter(i=>i.cat===c.id).length);
   done.forEach(i=>genresOf(i).forEach(x=>g[x]=(g[x]||0)+1));
   const top=Object.fromEntries(Object.entries(g).sort((a,b)=>b[1]-a[1]).slice(0,6));
-  for(let k=1;k<=12;k++)m[k]=0;done.forEach(i=>{const d=new Date(i.watched_on||i.ts);if(d.getFullYear()===yr)m[d.getMonth()+1]++;});
+  for(let k=1;k<=12;k++)m[k]=0;done.forEach(i=>{const d=new Date(i.ts);if(d.getFullYear()===yr)m[d.getMonth()+1]++;});
   all.forEach(i=>Object.entries(i.ratings||{}).forEach(([n,v])=>(rt[n]=rt[n]||[]).push(v)));
   const avg=Object.fromEntries(Object.entries(rt).map(([n,a])=>[n,+(a.reduce((x,y)=>x+y,0)/a.length).toFixed(1)]));
   const mx=o=>Math.max(1,...Object.values(o));
@@ -106,19 +105,16 @@ function togEp(n){
 
 function setSeason(d){const i=items[infoId],S=Math.max(1,(i.season||1)+d);patch(infoId,{season:S,episode:Math.max(0,...((i.seen||{})[S]||[0]))});}
 
-function setFear(n){patch(infoId,{fear:n});}
-
 function infoEpisodesAndFear(){
   const i=items[infoId];if(!i)return;
   const S=i.season||1,seen=new Set((i.seen||{})[S]||[]),T=Math.min(+i.total||0,300);let h='';
   if(EP.includes(i.cat))h+=`<div class="cs-title" style="margin-top:12px">Сезон <button class="upload-btn" onclick="setSeason(-1)">◀</button> ${S} <button class="upload-btn" onclick="setSeason(1)">▶</button> · просмотрено ${seen.size}${T?'/'+T+', осталось '+Math.max(0,T-seen.size):''}</div>`+(T?`<div class="eg">${Array.from({length:T},(_,k)=>`<b class="${seen.has(k+1)?'on':''}" onclick="togEp(${k+1})">${k+1}</b>`).join('')}</div>`:'<small style="color:var(--text3)">Укажи «Всего серий» в форме редактирования</small>');
-  h+=`<div class="cs-title" style="margin-top:12px">Насколько страшно</div><div class="chips">${[1,2,3,4,5].map(n=>`<span class="stb" style="${(i.fear||0)>=n?'background:var(--accent-glow)':''}" onclick="setFear(${n})">💀</span>`).join('')}<span class="stb" onclick="setFear(0)">сброс</span><label style="font-size:12px"><input type="checkbox" ${i.scary?'checked':''} onchange="patch(infoId,{scary:this.checked})"> скримеры</label></div>`;
   $('infoBody').firstElementChild.insertAdjacentHTML('afterend',h);
 }
 
 function infoArchiveButton(){const i=items[infoId];if(i)$('infoBody').insertAdjacentHTML('beforeend',`<div style="margin-top:12px"><button class="upload-btn" onclick="patch(infoId,{archived:!items[infoId].archived})">📦 ${i.archived?'Вернуть из архива':'В архив'}</button></div>`);}
 
-function drawInfo(){drawInfoMain();infoPosterPicker();infoEpisodesAndFear();drawFranchise();drawGenresEdit();infoArchiveButton();applyPosterColor();if(document.body.classList.contains('split')&&!document.getElementById('infoClose')){const b=document.createElement('button');b.id='infoClose';b.className='btn-icon del';b.title='Закрыть карточку';b.textContent='✕';b.onclick=closeModal;b.style.position='absolute';b.style.top='10px';b.style.right='12px';b.style.zIndex='2';$('infoBody')?.parentElement?.insertAdjacentElement('beforebegin',b);}}
+function drawInfo(){drawInfoMain();infoPosterPicker();drawFranchise();drawGenresEdit();infoArchiveButton();applyPosterColor();if(document.body.classList.contains('split')&&!document.getElementById('infoClose')){const b=document.createElement('button');b.id='infoClose';b.className='btn-icon del';b.title='Закрыть карточку';b.textContent='✕';b.onclick=closeModal;b.style.position='absolute';b.style.top='10px';b.style.right='12px';b.style.zIndex='2';$('infoBody')?.parentElement?.insertAdjacentElement('beforebegin',b);}}
 
 /* Цвета из постера: средний яркий цвет обложки подкрашивает окно карточки. Работает, если сайт-источник картинки разрешает чтение пикселей. */
 function posterColor(url){
