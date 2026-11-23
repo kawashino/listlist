@@ -244,16 +244,19 @@ async function fillPosters(){
   let n=0,ok=0;toast('Дозаполняю данные…');
   for(const i of todo){
     const cur=items[i.id];if(!cur)continue;
-    const f=await lookup(cur);n++;
-    const nz=Object.fromEntries(Object.entries(f).filter(([,v])=>v!==''&&v!=null&&!(Array.isArray(v)&&!v.length)));
-    const info={...(cur.info||{}),...nz,ts:1};
-    items[i.id]={...cur,poster:cur.poster||nz.poster||'',franchise:cur.franchise||nz.franchise||'',total:cur.total||nz.eps||0,info};
-    if(nz.poster||nz.desc||nz.genres)ok++;
-    try{await upsertItem(items[i.id]);}catch(e){}
-    if(n%4===0){render();toast(`Дозаполнено: ${ok} из ${n} (всего ${todo.length})`);}
+    try{
+      const f=await lookup(cur);n++;
+      const nz=Object.fromEntries(Object.entries(f).filter(([,v])=>v!==''&&v!=null&&!(Array.isArray(v)&&!v.length)));
+      const info={...(cur.info||{}),...nz,ts:1};
+      items[i.id]={...cur,poster:cur.poster||nz.poster||'',franchise:cur.franchise||nz.franchise||'',total:cur.total||nz.eps||0,info};
+      if(nz.poster||nz.desc||nz.genres)ok++;
+      try{await upsertItem(items[i.id]);}catch(e){}
+    }catch(e){console.warn('fillPosters failed for',i.id,e);}
+    if(n%4===0){try{render();}catch(e){}toast(`Дозаполнено: ${ok} из ${n} (всего ${todo.length})`);}
     await new Promise(r=>setTimeout(r,600));
   }
-  render();toast(`Готово: обновлено ${ok} из ${n}`);
+  try{render();}catch(e){}
+  toast(`Готово: обновлено ${ok} из ${n}`);
 }
 
 async function pickPoster(){

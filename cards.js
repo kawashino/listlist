@@ -264,7 +264,8 @@ function mergeShared(k,cur,mine){
 }
 
 async function patch(id,o){
-  const old=items[id];if(!old)return;items[id]={...old,...o};render();if(infoId===id&&$('info').classList.contains('open'))drawInfo();
+  const old=items[id];if(!old)return;items[id]={...old,...o};
+  try{render();if(infoId===id&&$('info').classList.contains('open'))drawInfo();}catch(e){}
   try{for(const k of ['wants','reacts','comments'])if(k in o){const r=await sbFetch(`/items?id=eq.${encodeURIComponent(id)}&select=${k}`);items[id][k]=mergeShared(k,r?.[0]?.[k],o[k]);}
     await upsertItem(items[id]);render();}catch(e){setSyncState('error','ошибка');}
 }

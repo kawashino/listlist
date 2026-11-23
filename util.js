@@ -64,7 +64,8 @@ function normTitle(s) {
 }
 
 function toast(msg,undo){
-  const t=$('toast');t.innerHTML=`<span>${esc(msg)}</span>${undo?'<button>Отменить</button>':''}`;t.classList.add('show');
+  const t=$('toast');if(!t)return;
+  t.innerHTML=`<span>${esc(msg)}</span>${undo?'<button>Отменить</button>':''}`;t.classList.add('show');
   if(undo)t.querySelector('button').onclick=()=>{undo();t.classList.remove('show');};
   clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),6000);
 }
