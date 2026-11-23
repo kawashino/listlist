@@ -32,7 +32,7 @@ function renderList(){
     const tags=(i.tags||'').split(',').map(t=>t.trim()).filter(Boolean).map(t=>`<span class="tg">${esc(t)}</span>`).join('');
     const gs=genresOf(i).slice(0,4).map(t=>`<span class="tg">${esc(t)}</span>`).join('');
     const w=Object.keys(i.wants||{});
-    return `<div class="item st-${st}${w.length>1?' both':''}${SEL.has(i.id)?' sel':''}" data-id="${i.id}" data-title="${esc(i.title)}" tabindex="0" role="button" aria-label="${esc(i.title)}">
+    return `<div class="item cat-${i.cat.replace(/^cat_/,'custom')} st-${st}${w.length>1?' both':''}${SEL.has(i.id)?' sel':''}" data-id="${i.id}" data-title="${esc(i.title)}" tabindex="0" role="button" aria-label="${esc(i.title)}">
       <label class="tsel" onclick="event.stopPropagation()" title="Выбрать"><input type="checkbox" ${SEL.has(i.id)?'checked':''} onchange="toggleSel('${i.id}')"></label>
       ${i.poster?`<img class="poster" loading="lazy" src="${esc(i.poster)}" onerror="this.remove()">`:''}
       <div class="check" onclick="toggleDone('${i.id}')">${st==='done'?(ic.check?`<img src="${ic.check}">`:'✓'):''}</div>
@@ -247,22 +247,44 @@ function bump(id){const i=items[id],S=i.season||1,seen={...(i.seen||{})},a=new S
 
 
 function smartOk(i){
-  const f=SF,y=+i.info?.year||0,g=genresText(i).toLowerCase();
+  const f=SF,y=+i.info?.year||0,g=genresText(i).toLowerCase(),tags=((i.tags||'').toLowerCase());
   if(f.r&&avgR(i)<f.r)return false;if(f.y1&&(!y||y<f.y1))return false;if(f.y2&&(!y||y>f.y2))return false;
-  if(f.g&&!g.includes(f.g))return false;if(f.t&&!(i.tags||'').toLowerCase().includes(f.t))return false;return true;
+  if(f.g&&!f.g.some(x=>g.includes(x)))return false;if(f.t&&!f.t.some(x=>tags.includes(x)))return false;return true;
 }
 
-function readFlt(){SF={r:+$('sfR').value||0,y1:+$('sfY1').value||0,y2:+$('sfY2').value||0,g:$('sfG').value.trim().toLowerCase(),t:$('sfT').value.trim().toLowerCase()};}
+function readFlt(){SF={r:+$('sfR').value||0,y1:+$('sfY1').value||0,y2:+$('sfY2').value||0,g:($('sfG').value||'').trim().toLowerCase().split(',').filter(Boolean),t:($('sfT').value||'').trim().toLowerCase().split(',').filter(Boolean)};}
 
-function writeFlt(){$('sfR').value=SF.r||'';$('sfY1').value=SF.y1||'';$('sfY2').value=SF.y2||'';$('sfG').value=SF.g||'';$('sfT').value=SF.t||'';}
+function writeFlt(){$('sfR').value=SF.r||'';$('sfY1').value=SF.y1||'';$('sfY2').value=SF.y2||'';$('sfG').value=(SF.g||[]).join(', ');$('sfT').value=(SF.t||[]).join(', ');}
 
-function applyFlt(){readFlt();$('flt').classList.remove('open');render();$('fltBtn').style.outline=Object.values(SF).some(Boolean)?'2px solid var(--accent)':'';}
+function applyFlt(){readFlt();$('flt').classList.remove('open');render();$('fltBtn').style.outline=(SF.r||SF.y1||SF.y2||(SF.g&&SF.g.length)||(SF.t&&SF.t.length))?'2px solid var(--accent)':'';}
 
 function resetFlt(){SF={};writeFlt();applyFlt();}
 
 function saveView(){readFlt();const n=(prompt('Название вида?')||'').trim();if(!n)return;const v=JSON.parse(localStorage.getItem('wl_views')||'{}');v[n]=SF;localStorage.setItem('wl_views',JSON.stringify(v));drawViews();}
 
+function openFlt(){renderPillRow('g');renderPillRow('t');$('flt').classList.add('open');}
 function useView(n){SF=JSON.parse(localStorage.getItem('wl_views')||'{}')[n]||{};writeFlt();applyFlt();}
+
+function toggleFltPill(k,v){
+  const arr=SF[k]||[];
+  const i=arr.indexOf(v);
+  if(i>=0)arr.splice(i,1);else arr.push(v);
+  SF[k]=arr;
+  renderPillRow(k);
+  applyFlt();
+}
+
+function renderPillRow(k){
+  const box=$(k==='g'?'fltGenres':'fltTags');if(!box)return;
+  let all=[];
+  Object.values(items).filter(i=>i.cat===($('inputCat')?$('inputCat').value||currentTab:currentTab)).forEach(i=>{
+    if(k==='g'){genresOf(i).forEach(x=>all.push(x.toLowerCase()));}
+    else if(k==='t'){(i.tags||'').split(',').map(s=>s.trim().toLowerCase()).filter(Boolean).forEach(x=>all.push(x));}
+  });
+  all=[...new Set(all)].sort();
+  const active=new Set(SF[k]||[]);
+  box.innerHTML=all.map(v=>`<span class="pill${active.has(v)?' pill-active':''}" onclick="toggleFltPill('${k}','${esc(v)}')">${esc(v)}</span>`).join('');
+}
 
 function drawViews(){$('views').innerHTML=Object.keys(JSON.parse(localStorage.getItem('wl_views')||'{}')).map(n=>`<span class="stb" data-n="${esc(n)}" onclick="useView(this.dataset.n)">${esc(n)}</span>`).join('');}
 
@@ -332,12 +354,13 @@ uiStep(290, () => {
 $('fColl').closest('.field').insertAdjacentHTML('afterend','<div class="field"><label>Франшиза (общая для частей)</label><input id="fFr" list="frList" placeholder="Silent Hill"><datalist id="frList"></datalist></div>');
 });
 uiStep(300, () => {
-document.querySelector('.toolbar').insertAdjacentHTML('beforeend','<select id="frSel" class="sort-select" onchange="curFr=this.value;render()" style="display:none"></select><button id="fltBtn" class="filter-btn" onclick="$(\'flt\').classList.add(\'open\')">🔎</button>');
+document.querySelector('.toolbar').insertAdjacentHTML('beforeend','<select id="frSel" class="sort-select" onchange="curFr=this.value;render()" style="display:none"></select><button id="fltBtn" class="filter-btn" onclick="openFlt()">🔎</button>');
 });
 uiStep(310, () => {
 document.body.insertAdjacentHTML('beforeend',`<div id="flt" class="overlay" onclick="if(event.target===this)this.classList.remove('open')"><div class="modal"><div class="modal-title">🔎 Умные фильтры</div>
    <div class="field row3"><div><label>Оценка от</label><input id="sfR" type="number" min="0" max="10" step=".5"></div><div><label>Год от</label><input id="sfY1" type="number"></div><div><label>Год до</label><input id="sfY2" type="number"></div></div>
-   <div class="field row3"><div><label>Жанр</label><input id="sfG"></div><div><label>Тег</label><input id="sfT"></div></div>
+   <div class="field"><label>Жанры</label><div class="pill-row" id="fltGenres"></div></div>
+   <div class="field"><label>Теги</label><div class="pill-row" id="fltTags"></div></div>
    <div id="views" class="chips"></div>
    <div class="btn-row"><button class="btn btn-secondary" onclick="resetFlt()">Сбросить</button><button class="btn btn-secondary" onclick="saveView()">💾 Вид</button><button class="btn btn-primary" onclick="applyFlt()">Применить</button></div></div></div>`);
 });
