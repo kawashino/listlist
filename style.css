@@ -131,6 +131,7 @@ header { background:var(--header-bg); border-bottom:1px solid var(--border-color
 .item:hover { background:var(--card-hover); transform:translateY(-1px); box-shadow:0 6px 20px rgba(0,0,0,0.4); }
 .item.done { background:var(--done-bg); border-color:rgba(34,197,94,.2); }
 .check { width:28px; height:28px; border-radius:50%; border:2px solid rgba(255,255,255,0.15); cursor:pointer; flex-shrink:0; display:flex; align-items:center; justify-content:center; transition:border-color .2s, background .2s, transform .15s; font-size:14px; overflow:hidden; }
+.check:empty{display:none}
 .check:hover { transform:scale(1.1); border-color:var(--done); }
 .check img { width:100%; height:100%; object-fit:cover; border-radius:50%; }
 .item.done .check { background:var(--done); border-color:var(--done); }

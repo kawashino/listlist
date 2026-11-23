@@ -14,6 +14,14 @@ function addCmt(){
   xtAdd('item_comments',{id:c.id,item_id:id,author:ME,body:t,ts:c.ts}).catch(()=>setSyncState('error','ошибка'));
 }
 
+async function refreshItemInfo(id){
+  const i=items[id];if(!i)return;
+  const inf=await findInfo(i);
+  patch(id,{info:{...(i.info||{}),...inf,ts:1},poster:i.poster||inf.poster||'',franchise:i.franchise||inf.franchise||'',total:i.total||inf.eps||0});
+  drawInfo();
+  toast('Данные обновлены');
+}
+
 async function openInfo(id){
   const i=items[id];if(!i)return;infoId=id;
   if(document.body.classList.contains('split')){
@@ -40,7 +48,7 @@ function showTrl(){$('trl').innerHTML=`<iframe src="${esc(items[infoId].info.tra
 function drawInfoMain(){
   const i=items[infoId],f=i.info||{},rc=i.reacts||{},pic=i.poster||f.poster;
   const gs=genresOf(i);
-  $('infoBody').innerHTML=`<div style="display:flex;gap:12px">${pic?`<img class="poster" style="width:90px;height:128px" src="${esc(pic)}">`:''}<div><h3 style="margin:0 0 6px">${esc(i.title)}</h3><div class="chips">${f.year?`<span>${esc(f.year)}</span>`:''}${gs.map(g=>`<span class="tg">${esc(g)}</span>`).join('')}${f.score?`<span class="rt">⭐ ${esc(f.score)}</span>`:''}</div></div></div>
+  $('infoBody').innerHTML=`<div style="display:flex;gap:12px">${pic?`<img class="poster" style="width:90px;height:128px" src="${esc(pic)}">`:''}<div><div style="display:flex;align-items:center;gap:8px"><h3 style="margin:0">${esc(i.title)}</h3><button class="upload-btn" onclick="refreshItemInfo('${i.id}')" title="Обновить постер, описание, жанры, франшизу">🔄</button></div><div class="chips">${f.year?`<span>${esc(f.year)}</span>`:''}${gs.map(g=>`<span class="tg">${esc(g)}</span>`).join('')}${f.score?`<span class="rt">⭐ ${esc(f.score)}</span>`:''}</div></div></div>
   ${f.desc?`<p class="info-desc" style="font-size:13px;color:var(--text2);line-height:1.5;max-height:140px;overflow:auto">${esc(f.desc)}</p>`:(f.ts?'':'<p style="color:var(--text3)">Загружаю описание…</p>')}
   ${f.trailer?`<div id="trl"><button class="upload-btn" onclick="showTrl()">▶️ Трейлер</button></div>`:''}
   <div class="cr" style="margin:10px 0"><span class="cl">Дата просмотра</span><input type="date" value="${esc(i.watched_on||'')}" onchange="patch('${i.id}',{watched_on:this.value})"><label style="font-size:12px"><input type="checkbox" ${i.together?'checked':''} onchange="patch('${i.id}',{together:this.checked})"> вместе</label></div>
