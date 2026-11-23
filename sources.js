@@ -270,7 +270,7 @@ async function fillPosters(){
 }
 
 async function pickPoster(){
-  const i=items[infoId],g=$('posterPick');g.textContent='Ищу…';
+  const i=items[infoId],g=$('posterPick');if(!g)return;g.textContent='Ищу…';
   const c=await cands(($('pq').value.trim())||i.title,i.cat);
   g.innerHTML=c.map(x=>`<img src="${esc(x.poster)}" style="height:110px" onclick="patch('${i.id}',{poster:'${x.poster}'})">`).join('')||'Не нашлось. Попробуй другое название или вставь ссылку в форме.';
 }
@@ -313,22 +313,12 @@ async function fromLink(u){
 
 function onTitle(){
   clearTimeout(sugT);_pick=null;const v=$('inputTitle').value.trim(),box=$('sug');
-  if(editingId||v.length<2){box.innerHTML='';return;}
+  if(editingId||v.length<2){if(box)box.innerHTML='';return;}
   sugT=setTimeout(async()=>{
+    if(!box)return;
     box.textContent='Ищу…';
     const cat=$('inputCat').value||currentTab;
     let c=/^https?:\/\//.test(v)?await linkCands(v):await cands(v,cat);
-    // Для фильмов и сериалов пробуем альтернативные названия, если основное не дало результатов
-    if(!c.length&&(cat==='films'||cat==='series')){
-      const ru=$('inputTitleRu')?$('inputTitleRu').value.trim():'';
-      const en=$('inputTitleEn')?$('inputTitleEn').value.trim():'';
-      const orig=$('inputTitleOrig')?$('inputTitleOrig').value.trim():'';
-      for(const aq of [ru,en,orig].filter(Boolean)){
-        if(aq===v)continue;
-        const ra=await cands(aq,cat);
-        if(ra.length){c=ra;break;}
-      }
-    }
     if(!c.length){box.textContent=/^https?:/.test(v)?'Для этой ссылки нет открытого API. Введи название':'Ничего не нашлось';return;}
     if(c.length===1&&c[0].exact){window._cs=c;takePick(0);toast('Распознано: '+c[0].title);return;}
     window._cs=c;box.innerHTML=c.slice(0,6).map((x,k)=>`<div class="pick2" onclick="takePick(${k})"><img src="${esc(x.poster)}"><span>${esc(x.title||'')}${x.year?' · '+x.year:''}</span></div>`).join('');

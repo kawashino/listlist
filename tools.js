@@ -93,11 +93,11 @@ function showShortcuts(){
 }
 
 async function usage(silent){
-  const el=$('usage');if(!silent)el.textContent='Считаю…';let bytes=0,n=0;
+  const el=$('usage');if(!silent&&el)el.textContent='Считаю…';let bytes=0,n=0;
   try{for(const p of ['bg','poster','video']){const r=await fetch(`${SUPA_URL}/storage/v1/object/list/media`,{method:'POST',headers:{apikey:SUPA_KEY,Authorization:`Bearer ${SUPA_KEY}`,'Content-Type':'application/json'},body:JSON.stringify({prefix:p,limit:1000})});(await r.json()).forEach(o=>{bytes+=o.metadata?.size||0;n++;});}
     const warn=bytes>8e8;if(silent&&!warn)return;if(warn)toast('Хранилище почти заполнено');
-    el.innerHTML=`Файлы: <b>${(bytes/1048576).toFixed(1)} МБ</b> (${n} шт.), карточек: <b>${Object.keys(items).length}</b>.${warn?' ⚠️ почти заполнено.':''} Точные лимиты: Supabase → Project → Usage.`;}
-  catch(e){if(!silent)el.textContent='Не удалось получить данные';}
+    if(el)el.innerHTML=`Файлы: <b>${(bytes/1048576).toFixed(1)} МБ</b> (${n} шт.), карточек: <b>${Object.keys(items).length}</b>.${warn?' ⚠️ почти заполнено.':''} Точные лимиты: Supabase → Project → Usage.`;}
+  catch(e){if(!silent&&el)el.textContent='Не удалось получить данные';}
 }
 
 /* ===== «Поделиться → в наш список», ссылка из буфера, экран «Состояние», экран «Сегодня» ===== */

@@ -53,10 +53,10 @@ async function pullTheme(){
 function setBgUrl(u){u=(u||$('urlBg').value).trim();if(!u)return;C.bg=u;C.bgGrad=false;$('bgGradToggle').checked=false;saveCustom();applyBg();toast('Обои установлены');}
 
 async function whSearch(){
-  const q=encodeURIComponent($('whQ').value.trim()),r=$('whRes');r.textContent='Ищу…';
+  const q=encodeURIComponent($('whQ').value.trim()),r=$('whRes');if(!r)return;r.textContent='Ищу…';
   try{const d=await(await fetch(`https://wallhaven.cc/api/v1/search?q=${q}&sorting=${$('whS').value}&categories=111&purity=100&atleast=1280x720`)).json();
     r.innerHTML=(d.data||[]).slice(0,24).map(x=>`<img loading="lazy" src="${x.thumbs.small}" onclick="setBgUrl('${x.path}')">`).join('')||'Ничего не найдено';}
-  catch(e){r.textContent='Wallhaven недоступен. Вставь прямую ссылку на картинку ниже.';}
+  catch(e){if(r)r.textContent='Wallhaven недоступен. Вставь прямую ссылку на картинку ниже.';}
 }
 
 function applyVideo(){
