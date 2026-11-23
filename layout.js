@@ -2,8 +2,7 @@
 
 document.head.insertAdjacentHTML('beforeend','<style id="userCss"></style>');
 
-const UI0={glow:0,glowC:'#7c5cfc',grad:false,gA:'#7c5cfc',gB:'#ec4899',par:false,parS:20,css:'',nav:false,fabL:false,hide:true,cols:2,dens:1,vib:true,video:'',split:false};
-const U=()=>{if(!C.ui)C.ui={};for(const k in UI0)if(!(k in C.ui))C.ui[k]=UI0[k];return C.ui;};
+const U=()=>{if(!C.ui)C.ui={};return C.ui;};
 
 function applyUiCore(){
   const u=U(),r=document.documentElement.style,b=document.body.classList;
@@ -62,12 +61,8 @@ function drawMoreMain(){
   drawTabsEd();
 }
 
-Object.assign(UI0,{layout:'top',tools:'collapse',toolsOpen:false,view:'list',colsM:1,galMin:150,maxw:860,gap:10,tl:1,btnS:30,pw:46,cardSize:100,showPoster:true,showNotes:true,showChips:true,chipsWrap:false,actHover:false,showSync:true,logo:'',posterColor:true});
-
 function applyUiLayout(){
-  const u=U(),r=document.documentElement.style,b=document.body.classList;
-  r.setProperty('--colsm',u.colsM);r.setProperty('--gal',u.galMin+'px');r.setProperty('--maxw',u.maxw+'px');r.setProperty('--gap',u.gap+'px');
-  r.setProperty('--tl',u.tl);r.setProperty('--bs',u.btnS+'px');r.setProperty('--pw',u.pw+'px');r.setProperty('--ph',Math.round(u.pw*1.4)+'px');r.setProperty('--cs',u.cardSize/100);
+  const u=C.ui||{},b=document.body.classList;
   b.toggle('side',u.layout==='side');b.toggle('gal',u.view==='gal');b.toggle('cmp',u.view==='cmp');b.toggle('nop',!u.showPoster);b.toggle('non',!u.showNotes);
   b.toggle('nch',!u.showChips);b.toggle('chipsw',!!u.chipsWrap);b.toggle('acth',!!u.actHover);b.toggle('tools-open',u.tools==='show'||!!u.toolsOpen);
   b.toggle('split',u.split&&innerWidth>=1200);

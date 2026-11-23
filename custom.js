@@ -17,7 +17,8 @@ const CD = {
     search:null
   },
   customCats:[],
-  rgb:{ border:false, text:false, accent:false, header:false, card:false, metaText:false, speed:3, sat:80, light:55 }
+  rgb:{ border:false, text:false, accent:false, header:false, card:false, metaText:false, speed:3, sat:80, light:55 },
+  ui:{ layout:'top', tools:'collapse', toolsOpen:false, view:'list', colsM:1, galMin:150, maxw:860, gap:10, tl:1, btnS:30, pw:46, cardSize:100, showPoster:true, showNotes:true, showChips:true, chipsWrap:false, actHover:false, showSync:true, logo:'', posterColor:true, glow:0, glowC:'#7c5cfc', grad:false, gA:'#7c5cfc', gB:'#ec4899', par:false, parS:20, css:'', nav:false, fabL:false, hide:true, cols:2, dens:1, vib:true, video:'', split:false }
 };
 let C = JSON.parse(JSON.stringify(CD));
 
@@ -90,6 +91,10 @@ function applyCustom(){
   // tabs
   r.style.setProperty('--tab-anime',C.tabAnime); r.style.setProperty('--tab-games',C.tabGames);
   r.style.setProperty('--tab-series',C.tabSeries); r.style.setProperty('--tab-films',C.tabFilms);
+  // layout / UI
+  const u=C.ui||{};
+  r.style.setProperty('--colsm',u.colsM||1);r.style.setProperty('--gal',(u.galMin||150)+'px');r.style.setProperty('--maxw',(u.maxw||860)+'px');r.style.setProperty('--gap',(u.gap||10)+'px');
+  r.style.setProperty('--tl',u.tl||1);r.style.setProperty('--bs',(u.btnS||30)+'px');r.style.setProperty('--pw',(u.pw||46)+'px');r.style.setProperty('--ph',Math.round((u.pw||46)*1.4)+'px');r.style.setProperty('--cs',(u.cardSize||100)/100);
   // bg
   applyBg();
   // blur
