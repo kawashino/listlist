@@ -62,12 +62,12 @@ function drawMoreMain(){
   drawTabsEd();
 }
 
-Object.assign(UI0,{layout:'top',tools:'collapse',toolsOpen:false,view:'list',colsM:1,galMin:150,maxw:860,gap:10,tl:1,btnS:30,pw:46,showPoster:true,showNotes:true,showChips:true,chipsWrap:false,actHover:false,showSync:true,logo:'',posterColor:true});
+Object.assign(UI0,{layout:'top',tools:'collapse',toolsOpen:false,view:'list',colsM:1,galMin:150,maxw:860,gap:10,tl:1,btnS:30,pw:46,cardSize:100,showPoster:true,showNotes:true,showChips:true,chipsWrap:false,actHover:false,showSync:true,logo:'',posterColor:true});
 
 function applyUiLayout(){
   const u=U(),r=document.documentElement.style,b=document.body.classList;
   r.setProperty('--colsm',u.colsM);r.setProperty('--gal',u.galMin+'px');r.setProperty('--maxw',u.maxw+'px');r.setProperty('--gap',u.gap+'px');
-  r.setProperty('--tl',u.tl);r.setProperty('--bs',u.btnS+'px');r.setProperty('--pw',u.pw+'px');r.setProperty('--ph',Math.round(u.pw*1.4)+'px');
+  r.setProperty('--tl',u.tl);r.setProperty('--bs',u.btnS+'px');r.setProperty('--pw',u.pw+'px');r.setProperty('--ph',Math.round(u.pw*1.4)+'px');r.setProperty('--cs',u.cardSize/100);
   b.toggle('side',u.layout==='side');b.toggle('gal',u.view==='gal');b.toggle('cmp',u.view==='cmp');b.toggle('nop',!u.showPoster);b.toggle('non',!u.showNotes);
   b.toggle('nch',!u.showChips);b.toggle('chipsw',!!u.chipsWrap);b.toggle('acth',!!u.actHover);b.toggle('tools-open',u.tools==='show'||!!u.toolsOpen);
   b.toggle('split',u.split&&innerWidth>=1200);
@@ -96,7 +96,7 @@ function drawMoreLayout(){
    ${rw('Инструменты',sl('tools',[['collapse','Сворачиваемые (⋯)'],['show','Всегда видны']]))}
    ${rw('Вид карточек',sl('view',[['list','Список'],['gal','Галерея постеров'],['cmp','Компактно'],['table','Таблица']]))}
    ${rw('Колонок на телефоне',sl('colsM',[[1,'1'],[2,'2']]))}
-   ${rw('Постер в галерее',rg('galMin',110,260,10))}${rw('Постер в списке',rg('pw',30,120,2))}
+   ${rw('Постер в галерее',rg('galMin',110,260,10))}${rw('Постер в списке',rg('pw',30,120,2))}${rw('Размер карточек',rg('cardSize',70,150,5))}
    ${rw('Ширина страницы (ПК)',rg('maxw',700,1600,20))}${rw('Отступ карточек',rg('gap',4,24,2))}
    ${rw('Split view (список + карта, ПК)',tg('split'))}
    ${rw('Строк в названии',rg('tl',1,3))}${rw('Размер кнопок',rg('btnS',22,42,2))}

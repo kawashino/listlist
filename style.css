@@ -347,8 +347,9 @@ body.glow .item{box-shadow:0 0 var(--glow) var(--glowc),var(--card-shadow)}
   @media(min-width:700px){#list{grid-template-columns:repeat(var(--cols,2),1fr)!important}}
   .chips{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}.chips::-webkit-scrollbar{display:none}.chips>*{flex:none;white-space:nowrap}
   body.chipsw .chips{flex-wrap:wrap;overflow:visible}
-  .item-title{white-space:normal!important;display:-webkit-box;-webkit-line-clamp:var(--tl,1);-webkit-box-orient:vertical;overflow:hidden}
-  .btn-icon{width:var(--bs,30px);height:var(--bs,30px)}.item .poster{width:var(--pw,46px);height:var(--ph,64px)}
+  .item-title{white-space:normal!important;display:-webkit-box;-webkit-line-clamp:var(--tl,1);-webkit-box-orient:vertical;overflow:hidden;font-size:calc(14px * var(--cs,1));}
+  .btn-icon{width:var(--bs,30px);height:var(--bs,30px)}.item .poster{width:calc(var(--pw,46px) * var(--cs,1));height:calc(var(--ph,64px) * var(--cs,1))}
+  .item-meta{font-size:calc(12px * var(--cs,1))}
   body.nop .poster{display:none}body.non .item-meta{display:none}body.nch .chips{display:none}
   body.cmp .chips,body.cmp .item-meta,body.cmp .poster{display:none}body.cmp .item{padding:6px 12px!important}
   body.gal #list{grid-template-columns:repeat(auto-fill,minmax(var(--gal,150px),1fr))!important}
