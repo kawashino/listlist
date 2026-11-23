@@ -85,3 +85,9 @@ function runUiSteps(){
     try{fn();}catch(e){console.warn('uiStep '+order+' failed:',e.message||e);}
   });
 }
+
+/* ===== ШИНА СОБЫТИЙ =====
+   Модули подписываются на события через on(), ядро вызывает emit(). Не зависит от порядка загрузки скриптов. */
+const Hooks = {};
+function on(name, fn) { (Hooks[name] = Hooks[name] || []).push(fn); }
+function emit(name, ...a) { (Hooks[name] || []).forEach(f => f(...a)); }
