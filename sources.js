@@ -116,7 +116,7 @@ function cleanDesc(s){
 
 function mergeGenres(lists){
   const out=[],seen=new Set();
-  lists.forEach(list=>(list||[]).forEach(g=>{
+  (lists||[]).forEach(list=>(list||[]).forEach(g=>{
     const s=String(g||'').trim();if(!s)return;
     const k=s.toLowerCase();if(seen.has(k))return;
     seen.add(k);out.push(s);
@@ -125,13 +125,14 @@ function mergeGenres(lists){
 }
 
 function pickLongestDesc(list){
-  return list.map(c=>cleanDesc(c.desc)).sort((a,b)=>b.length-a.length)[0]||'';
+  return((list||[]).map(c=>cleanDesc(c&&c.desc)).sort((a,b)=>b.length-a.length)[0]||'');
 }
 
 // Оценка кандидата: точное название важнее всего, дальше — постер, описание, жанры, рейтинг
 function scoreCand(c,q){
+  if(!c||!q)return 0;
   let s=SRC_PRIORITY[c._src]||2;
-  const t=normTitle(c.title);
+  const t=normTitle(c.title||'');
   if(t&&t===q)s+=40;
   else if(t&&(t.startsWith(q)||q.startsWith(t)))s+=18;
   else if(t&&t.indexOf(q)>=0)s+=10;
@@ -159,20 +160,20 @@ function probeImage(url){
 }
 
 async function pickPoster(list){
-  for(const c of list){if(c.poster&&await probeImage(c.poster))return c.poster;}
+  for(const c of list){if(c&&c.poster&&typeof c.poster==='string'&&c.poster.startsWith('http')&&await probeImage(c.poster))return c.poster;}
   return '';
 }
 
 // Франшиза: явное поле источника, иначе самый частый «родственник» (обычно корень серии)
 function franchiseFrom(list){
-  const explicit=list.map(x=>x.franchise).filter(Boolean);
+  const explicit=(list||[]).map(x=>x&&x.franchise).filter(Boolean);
   if(explicit.length){
     const c={};explicit.forEach(f=>{const k=f.toLowerCase();c[k]=(c[k]||0)+1;});
     const best=Object.keys(c).sort((a,b)=>c[b]-c[a])[0];
     return explicit.find(f=>f.toLowerCase()===best)||explicit[0];
   }
   const names=[];
-  list.forEach(x=>(x.relations||[]).forEach(r=>{
+  (list||[]).forEach(x=>(x&&x.relations||[]).forEach(r=>{
     if(r&&r.name&&/sequel|prequel|side|spin|alternative|character|summary|full|parent/i.test(r.relation||''))names.push(r.name);
   }));
   if(!names.length)return '';
@@ -186,7 +187,7 @@ async function candsStd(q,cat){
   const res=await Promise.allSettled(o.map(k=>SRC[k](q,cat)));
   const out=[];
   res.forEach((r,k)=>{if(r.status==='fulfilled')(r.value||[]).forEach(x=>out.push({...x,_src:o[k]}));});
-  return out.filter(x=>x.poster);
+  return out.filter(x=>x&&x.poster&&x.title);
 }
 
 // ===== КЭШ СПРАВОЧНЫХ ДАННЫХ =====
@@ -308,7 +309,7 @@ SRC.shikiM=async(q,k)=>{try{return(await J(`https://shikimori.one/api/${k==='ran
 
 async function cands(q,cat){
   const k=cat==='manga'?'manga':(C.customCats||[]).find(c=>c.id===cat)?.kind;
-  if(k==='books')return(await SRC.ol(q)).filter(x=>x.poster).map(x=>({...x,_src:'ol'}));
+  if(k==='books')return(await SRC.ol(q)).filter(x=>x&&x.poster&&typeof x.poster==='string'&&x.poster.startsWith('http')).map(x=>({...x,_src:'ol'}));
   if(k==='manga'||k==='ranobe'){
     const src=[['shikiM',SRC.shikiM],['shiki',SRC.shiki],['anilist',SRC.anilist]];
     const res=await Promise.allSettled(src.map(([,fn])=>fn(q,k)));
@@ -321,11 +322,13 @@ async function cands(q,cat){
 
 async function autoRefresh(){
   const week=6048e5,todo=Object.values(items).filter(i=>sOf(i)!=='done'&&(!i.info||!i.info.upd||Date.now()-i.info.upd>week)).slice(0,6);
-  for(const i of todo){const f=await lookup(i),cur=items[i.id];if(!cur)continue;
-    const nz=Object.fromEntries(Object.entries(f).filter(([,v])=>v!==''&&v!=null&&!(Array.isArray(v)&&!v.length)));
-    items[i.id]={...cur,info:{...cur.info,...nz,ts:1,upd:Date.now()},poster:cur.poster||f.poster||'',franchise:cur.franchise||f.franchise||'',total:cur.total||f.eps||0};
-    try{await upsertItem(items[i.id]);}catch(e){}await new Promise(r=>setTimeout(r,1500));}
-  render();
+  for(const i of todo){
+    try{const f=await lookup(i),cur=items[i.id];if(!cur)continue;
+      const nz=Object.fromEntries(Object.entries(f).filter(([,v])=>v!==''&&v!=null&&!(Array.isArray(v)&&!v.length)));
+      items[i.id]={...cur,info:{...cur.info,...nz,ts:1,upd:Date.now()},poster:cur.poster||f.poster||'',franchise:cur.franchise||f.franchise||'',total:cur.total||f.eps||0};
+      try{await upsertItem(items[i.id]);}catch(e){}}catch(e){console.warn('autoRefresh failed for',i.id,e);}
+    await new Promise(r=>setTimeout(r,1500));}
+  try{render();}catch(e){}
 }
 
 /* Данные из Викидаты по номеру в Кинопоиске / IMDb / статье Википедии: русское название, число серий и сезонов, год, постер. Без ключей. */
