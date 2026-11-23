@@ -101,7 +101,7 @@ const SRC={
     const w={anime:'аниме',films:'фильм',series:'сериал',games:'игра'}[cat]||'';
     for(const l of ['ru','en']){
       try{const d=await J(`https://${l}.wikipedia.org/w/api.php?action=query&generator=search&gsrlimit=4&gsrsearch=${encodeURIComponent(q+' '+(l==='ru'?w:''))}&prop=pageimages|extracts&piprop=thumbnail&pithumbsize=300&exintro=1&explaintext=1&exsentences=4&format=json&origin=*`);
-        const r=Object.values(d.query?.pages||{}).sort((a,b)=>a.index-b.index).map(p=>({title:p.title,poster:p.thumbnail?.source||'',desc:cleanDesc(p.extract),genres:[]})).filter(x=>x.poster);
+        const r=Object.values(d.query?.pages||{}).sort((a,b)=>a.index-b.index).map(p=>({title:p.title,poster:p.thumbnail?.source||'',desc:cleanDesc(p.extract),genres:[]}));
         if(r.length)return r;}catch(e){}
     }return[];
   }
@@ -187,7 +187,7 @@ async function candsStd(q,cat){
   const res=await Promise.allSettled(o.map(k=>SRC[k](q,cat)));
   const out=[];
   res.forEach((r,k)=>{if(r.status==='fulfilled')(r.value||[]).forEach(x=>out.push({...x,_src:o[k]}));});
-  return out.filter(x=>x&&x.poster&&x.title);
+  return out.filter(x=>x&&x.title);
 }
 
 // ===== КЭШ СПРАВОЧНЫХ ДАННЫХ =====
@@ -315,7 +315,7 @@ async function cands(q,cat){
     const res=await Promise.allSettled(src.map(([,fn])=>fn(q,k)));
     const out=[];
     res.forEach((r,i)=>{if(r.status==='fulfilled')(r.value||[]).forEach(x=>out.push({...x,_src:src[i][0]}));});
-    return out.filter(x=>x.poster);
+    return out.filter(x=>x.title);
   }
   return candsStd(q,cat);
 }
