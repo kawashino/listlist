@@ -3,6 +3,10 @@
 function renderList(){
   renderTabs();
   const list=$('list'),all=Object.values(items);
+  if (isLoading && all.length === 0) {
+    list.innerHTML = Array(6).fill('<div class="sk"></div>').join('');
+    return;
+  }
   let arr=all.filter(i=>i.cat===currentTab);
   if(curStatus!=='all')arr=arr.filter(i=>sOf(i)===curStatus);
   else if(currentFilter==='done')arr=arr.filter(i=>sOf(i)==='done');

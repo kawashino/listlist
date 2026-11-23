@@ -63,6 +63,12 @@ function normTitle(s) {
     .replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
 }
 
+// Средняя оценка карточки (по моим оценкам или info.score)
+function avgR(i) {
+  const r = Object.values(i.ratings || {}).filter(v => v > 0);
+  return r.length ? r.reduce((a, b) => a + b, 0) / r.length : (+i.info?.score || 0);
+}
+
 function toast(msg,undo){
   const t=$('toast');if(!t)return;
   t.innerHTML=`<span>${esc(msg)}</span>${undo?'<button>Отменить</button>':''}`;t.classList.add('show');
