@@ -74,14 +74,18 @@ function renderTable(arr,ic){
 
 /* ===== МУЛЬТИ-ВЫБОР ===== */
 let SEL=new Set();
-function toggleSel(id){SEL.has(id)?SEL.delete(id):SEL.add(id);render();}
-function clearSel(){SEL.clear();render();}
+function toggleSel(id){
+  SEL.has(id)?SEL.delete(id):SEL.add(id);
+  document.body.classList.toggle('selecting',SEL.size>0);
+  render();
+}
+function clearSel(){SEL.clear();document.body.classList.remove('selecting');render();}
 function rowClick(e,id){if(e.target.closest('button,input,a,.stb,label'))return;openInfo(id);}
 
 async function bulkStatus(st){
   const ids=[...SEL],changed=[];
   ids.forEach(id=>{const i=items[id];if(!i)return;items[id]={...i,status:st,done:st==='done'};changed.push(items[id]);});
-  SEL.clear();render();beep();
+  SEL.clear();document.body.classList.remove('selecting');render();beep();
   for(const it of changed){try{await upsertItem(it);}catch(e){}}
   toast('Статус изменён: '+changed.length);
 }
@@ -93,7 +97,7 @@ async function bulkCat(){
   if(!cat){toast('Нет такой категории');return;}
   const changed=[];
   SEL.forEach(id=>{const i=items[id];if(!i)return;items[id]={...i,cat};changed.push(items[id]);});
-  SEL.clear();render();
+  SEL.clear();document.body.classList.remove('selecting');render();
   for(const it of changed){try{await upsertItem(it);}catch(e){}}
   toast('Перенесено: '+changed.length);
 }
@@ -101,7 +105,7 @@ async function bulkCat(){
 async function bulkArchive(){
   const changed=[];
   SEL.forEach(id=>{const i=items[id];if(!i)return;items[id]={...i,archived:!i.archived};changed.push(items[id]);});
-  SEL.clear();render();
+  SEL.clear();document.body.classList.remove('selecting');render();
   for(const it of changed){try{await upsertItem(it);}catch(e){}}
   toast('Архив обновлён: '+changed.length);
 }
@@ -111,7 +115,7 @@ async function bulkDelete(){
   if(!confirm('Удалить выбранные карточки: '+ids.length+'?'))return;
   const removed=ids.map(id=>items[id]).filter(Boolean);
   ids.forEach(id=>delete items[id]);
-  SEL.clear();render();
+  SEL.clear();document.body.classList.remove('selecting');render();
   for(const id of ids){try{await deleteItemDb(id);}catch(e){}}
   toast('Удалено: '+ids.length,async()=>{
     removed.forEach(i=>items[i.id]=i);render();

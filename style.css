@@ -398,6 +398,8 @@ body.cmp .trow{padding:8px 12px!important}
 
 /* ===== MULTI-SELECT ===== */
 .tsel{flex-shrink:0}.tsel input{width:18px;height:18px;accent-color:var(--accent)}
+.tsel{display:none}
+body.selecting .tsel{display:flex}
 .item.sel{outline:2px solid var(--accent);box-shadow:0 0 0 4px var(--accent-glow);border-color:var(--accent)!important}
 .selbar{position:fixed;top:8px;left:50%;transform:translateX(-50%);z-index:100;display:flex;gap:8px;align-items:center;background:var(--header-bg);border-bottom:1px solid var(--border-color);padding:6px 14px;border-radius:0 0 14px 14px;box-shadow:0 4px 20px rgba(0,0,0,0.4);backdrop-filter:blur(16px)}
 .selbar-n{font-size:13px;font-weight:600;color:var(--text2);margin-right:10px}
