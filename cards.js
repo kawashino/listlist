@@ -14,24 +14,122 @@ function renderList(){
   getAllCats().forEach(c=>{const n=all.filter(i=>i.cat===c.id&&sOf(i)!=='done').length,el=$('badge-'+c.id);if(el){el.textContent=n;el.classList.toggle('show',n>0);}});
   const cat=all.filter(i=>i.cat===currentTab),d=cat.filter(i=>sOf(i)==='done').length;
   [['stat-total',cat.length],['stat-done',d],['stat-left',cat.length-d]].forEach(([id,v])=>{const e=$(id);if(e)e.textContent=v;});
-  if(!arr.length){list.innerHTML=`<div class="empty" style="grid-column:1/-1"><div class="empty-icon">${C.icons?.empty?`<img src="${C.icons.empty}" style="width:64px;height:64px;border-radius:14px;object-fit:cover">`:'📂'}</div><p>Здесь пока пусто</p><button class="btn btn-primary" style="margin-top:14px;max-width:200px" onclick="openModal()">+ Добавить</button></div>`;return;}
+  if(!arr.length){list.innerHTML=`<div class="empty" style="grid-column:1/-1"><div class="empty-icon">${C.icons?.empty?`<img src="${C.icons.empty}" style="width:64px;height:64px;border-radius:14px;object-fit:cover">`:'📂'}</div><p>Здесь пока пусто</p><button class="btn btn-primary" style="margin-top:14px;max-width:200px" onclick="openModal()">+ Добавить</button></div>`;selBar();return;}
   const ic=C.icons||{};
-  lastTotal=arr.length;arr=arr.slice(0,shown);list.innerHTML=arr.map(i=>{
+  lastTotal=arr.length;arr=arr.slice(0,shown);
+
+  // табличный вид: строка на тайтл, удобно для длинных списков на ПК
+  if(U().view==='table'){
+    list.innerHTML=renderTable(arr,ic);
+    if(C.rgb.text&&rgbRaf)document.querySelectorAll('.item-title').forEach(el=>el.style.color=`hsl(${rgbHue},${C.rgb.sat}%,${C.rgb.light}%)`);
+    selBar();
+    return;
+  }
+
+  list.innerHTML=arr.map(i=>{
     const st=sOf(i),rs=Object.entries(i.ratings||{}).filter(([,v])=>v>0).map(([k,v])=>esc(k)+' '+v).join(' · ');
     const prog=(st==='watching'&&EP.includes(i.cat))?`<span>${i.cat==='manga'?'гл. ':'S'+(i.season||1)+' · '}${i.episode||0}${i.total?'/'+i.total:''}<button class="pp" onclick="bump('${i.id}')">+1</button></span>`:'';
     const tags=(i.tags||'').split(',').map(t=>t.trim()).filter(Boolean).map(t=>`<span class="tg">${esc(t)}</span>`).join('');
-    const w=Object.keys(i.wants||{});return `<div class="item st-${st}${w.length>1?' both':''}">
+    const gs=genresOf(i).slice(0,4).map(t=>`<span class="tg">${esc(t)}</span>`).join('');
+    const w=Object.keys(i.wants||{});
+    return `<div class="item st-${st}${w.length>1?' both':''}${SEL.has(i.id)?' sel':''}" data-id="${i.id}" data-title="${esc(i.title)}" tabindex="0" role="button" aria-label="${esc(i.title)}">
+      <label class="tsel" onclick="event.stopPropagation()" title="Выбрать"><input type="checkbox" ${SEL.has(i.id)?'checked':''} onchange="toggleSel('${i.id}')"></label>
       ${i.poster?`<img class="poster" loading="lazy" src="${esc(i.poster)}" onerror="this.remove()">`:''}
       <div class="check" onclick="toggleDone('${i.id}')">${st==='done'?(ic.check?`<img src="${ic.check}">`:'✓'):''}</div>
       <div class="item-body"><div class="item-title" style="cursor:pointer" onclick="openInfo('${i.id}')">${esc(i.title)}</div>
         ${i.note?`<div class="item-meta">${esc(i.note)}</div>`:''}
         <div class="chips"><span class="stb" onclick="cycleStatus('${i.id}')">${ST[st]}</span><span class="stb" onclick="toggleWant('${i.id}')">${w.length?'💗 '+w.map(esc).join(', '):'🤍 хочу'}</span>${i.coll?'<span class="tg">📁 '+esc(i.coll)+'</span>':''}${i.franchise?`<span class="tg" style="cursor:pointer" data-f="${esc(i.franchise)}" onclick="setFr(this.dataset.f)">🔗 ${esc(i.franchise)} ${frProg(i.franchise)}</span>`:''}${i.fear?`<span>${'💀'.repeat(i.fear)}</span>`:''}${i.scary?'<span>😱 скримеры</span>':''}${prog}${rs?`<span class="rt">⭐ ${rs}</span>`:''}${i.added_by?`<span>+${esc(i.added_by)}</span>`:''}</div>
-        ${tags?`<div class="chips">${tags}</div>`:''}
+        ${gs||tags?`<div class="chips">${gs}${gs&&tags?'<span class="tg-sep"></span>':''}${tags}</div>`:''}
         ${i.link?`<a href="${esc(i.link)}" target="_blank" style="font-size:11px;color:var(--accent2);text-decoration:none">🔗 Открыть</a>`:''}
       </div>
       <div class="item-actions"><button class="btn-icon" onclick="editItem('${i.id}')">${ic.edit?`<img src="${ic.edit}">`:'✏️'}</button><button class="btn-icon del" onclick="deleteItem('${i.id}')">${ic.del?`<img src="${ic.del}">`:'🗑️'}</button></div></div>`;
   }).join('');
   if(C.rgb.text&&rgbRaf)document.querySelectorAll('.item-title').forEach(el=>el.style.color=`hsl(${rgbHue},${C.rgb.sat}%,${C.rgb.light}%)`);
+  selBar();
+}
+
+/* ===== ТАБЛИЧНЫЙ ВИД (ПК) ===== */
+function renderTable(arr,ic){
+  const row=i=>{
+    const st=sOf(i),rs=Object.entries(i.ratings||{}).filter(([,v])=>v>0).map(([k,v])=>v).join(',');
+    const score=i.info?.score||rs;
+    const prog=EP.includes(i.cat)&&st==='watching'&&i.episode?`${i.cat==='manga'?'гл.':'сер.'} ${i.episode}${i.total?'/'+i.total:''}`:'';
+    const gs=genresOf(i).slice(0,3).map(t=>`<span class="tg">${esc(t)}</span>`).join('');
+    return `<div class="trow${i.done?' done':''}${SEL.has(i.id)?' sel':''}" data-id="${i.id}" data-title="${esc(i.title)}" onclick="rowClick(event,'${i.id}')">
+      <label class="tsel" onclick="event.stopPropagation()" title="Выбрать"><input type="checkbox" ${SEL.has(i.id)?'checked':''} onchange="toggleSel('${i.id}')"></label>
+      ${i.poster?`<img class="poster" loading="lazy" src="${esc(i.poster)}" onerror="this.style.visibility='hidden'">`:'<span class="poster ph"></span>'}
+      <div class="tcell title"><span class="item-title">${esc(i.title)}</span>${i.note?`<small class="item-meta">${esc(i.note)}</small>`:''}</div>
+      <div class="tcell"><span class="stb" onclick="event.stopPropagation();cycleStatus('${i.id}')">${ST[st]}</span></div>
+      <div class="tcell c">${score?`<span class="rt">⭐ ${esc(score)}</span>`:''}</div>
+      <div class="tcell c">${esc(i.info?.year||'')}</div>
+      <div class="tcell c">${prog?`<span class="stb" onclick="event.stopPropagation();bump('${i.id}')">${prog} +1</span>`:''}</div>
+      <div class="tcell genres">${gs}</div>
+      <div class="tcell c">${i.coll?esc(i.coll):''}</div>
+      <div class="tcell act"><button class="btn-icon" onclick="event.stopPropagation();editItem('${i.id}')">${ic.edit?`<img src="${ic.edit}">`:'✏️'}</button><button class="btn-icon del" onclick="event.stopPropagation();deleteItem('${i.id}')">${ic.del?`<img src="${ic.del}">`:'🗑️'}</button></div>
+    </div>`;
+  };
+  const head=`<div class="thead"><span></span><span></span><span>Название</span><span>Статус</span><span>Оценка</span><span>Год</span><span>Прогресс</span><span>Жанры</span><span>Коллекция</span><span></span></div>`;
+  return head+arr.map(row).join('');
+}
+
+/* ===== МУЛЬТИ-ВЫБОР ===== */
+let SEL=new Set();
+function toggleSel(id){SEL.has(id)?SEL.delete(id):SEL.add(id);render();}
+function clearSel(){SEL.clear();render();}
+function rowClick(e,id){if(e.target.closest('button,input,a,.stb,label'))return;openInfo(id);}
+
+async function bulkStatus(st){
+  const ids=[...SEL],changed=[];
+  ids.forEach(id=>{const i=items[id];if(!i)return;items[id]={...i,status:st,done:st==='done'};changed.push(items[id]);});
+  SEL.clear();render();beep();
+  for(const it of changed){try{await upsertItem(it);}catch(e){}}
+  toast('Статус изменён: '+changed.length);
+}
+
+async function bulkCat(){
+  const names=getAllCats().map(c=>c.name).join(', ');
+  const name=(prompt('В какую категорию? ('+names+')')||'').trim();if(!name)return;
+  const cat=(getAllCats().find(c=>c.name.toLowerCase()===name.toLowerCase())||{}).id;
+  if(!cat){toast('Нет такой категории');return;}
+  const changed=[];
+  SEL.forEach(id=>{const i=items[id];if(!i)return;items[id]={...i,cat};changed.push(items[id]);});
+  SEL.clear();render();
+  for(const it of changed){try{await upsertItem(it);}catch(e){}}
+  toast('Перенесено: '+changed.length);
+}
+
+async function bulkArchive(){
+  const changed=[];
+  SEL.forEach(id=>{const i=items[id];if(!i)return;items[id]={...i,archived:!i.archived};changed.push(items[id]);});
+  SEL.clear();render();
+  for(const it of changed){try{await upsertItem(it);}catch(e){}}
+  toast('Архив обновлён: '+changed.length);
+}
+
+async function bulkDelete(){
+  const ids=[...SEL];if(!ids.length)return;
+  if(!confirm('Удалить выбранные карточки: '+ids.length+'?'))return;
+  const removed=ids.map(id=>items[id]).filter(Boolean);
+  ids.forEach(id=>delete items[id]);
+  SEL.clear();render();
+  for(const id of ids){try{await deleteItemDb(id);}catch(e){}}
+  toast('Удалено: '+ids.length,async()=>{
+    removed.forEach(i=>items[i.id]=i);render();
+    for(const i of removed){try{await upsertItem(i);}catch(e){}}
+  });
+}
+
+function selBar(){
+  let bar=$('selbar');
+  if(!SEL.size){if(bar)bar.remove();return;}
+  if(!bar){document.body.insertAdjacentHTML('beforeend','<div id="selbar" class="selbar"></div>');bar=$('selbar');}
+  bar.innerHTML=`<span class="selbar-n">Выбрано: <b>${SEL.size}</b></span>
+    <button class="filter-btn" onclick="bulkStatus('watching')">▶ Смотрю</button>
+    <button class="filter-btn" onclick="bulkStatus('done')">✅ Просмотрено</button>
+    <button class="filter-btn" onclick="bulkCat()">📂 В категорию</button>
+    <button class="filter-btn" onclick="bulkArchive()">📦 Архив</button>
+    <button class="filter-btn" onclick="bulkDelete()">🗑 Удалить</button>
+    <button class="filter-btn" onclick="clearSel()">✕</button>`;
 }
 
 async function setStatus(id,st){const i=items[id];if(!i)return;items[id]={...i,status:st,done:st==='done'};render();beep();try{await upsertItem(items[id]);}catch(e){setSyncState('error','ошибка');}}
@@ -50,7 +148,7 @@ function fillForm(i){
   $('overlay').classList.add('open');setTimeout(()=>$('inputTitle').focus(),80);
 }
 
-function openModal(){editingId=null;fillForm({});pasteLink(true);}
+function openModal(){editingId=null;fillForm({});pasteLink(true);if(innerWidth>=900)$('overlay').classList.add('modal-2col');else $('overlay').classList.remove('modal-2col');}
 
 function editItem(id){const i=items[id];if(!i)return;editingId=id;fillForm(i);}
 
@@ -86,8 +184,12 @@ async function saveItem(){
   let poster=poster0;
   if(!poster)poster=await findPoster(title,cat);
   const base=old||{id:Date.now().toString(36)+Math.random().toString(36).slice(2,6),ts:Date.now(),added_by:ME};
+  const genres=_pick&&_pick.genres?_pick.genres:[];
   const item={...base,cat,title,note:$('inputNote').value.trim(),link:$('inputLink').value.trim(),status:st,done:st==='done',
-    season:+$('fSeason').value||0,episode:+$('fEpisode').value||0,total:+$('fTotal').value||0,ratings,tags:$('fTags').value.trim(),poster,coll:$('fColl').value.trim(),franchise:$('fFr').value.trim(),...(_pick&&!old?{info:{ts:1,year:_pick.year||'',genres:_pick.genres||'',desc:_pick.desc||'',score:_pick.score||'',trailer:_pick.trailer||''}}:{})};
+    season:+$('fSeason').value||0,episode:+$('fEpisode').value||0,total:+$('fTotal').value||0,ratings,tags:$('fTags').value.trim(),poster,
+    coll:$('fColl').value.trim(),
+    franchise:$('fFr').value.trim()||(_pick&&_pick.franchise)||'',
+    ...(_pick?{info:{ts:1,year:_pick.year||'',genres,desc:_pick.desc||'',score:_pick.score||'',trailer:_pick.trailer||'',franchise:_pick.franchise||'',upd:Date.now()}}:{})};
   items[item.id]=item;render();closeModal();
   try{await upsertItem(item);setSyncState('live','сохранено');}catch(e){setSyncState('error','ошибка сохранения');}
   btn.disabled=false;btn.textContent='Сохранить';
@@ -127,9 +229,9 @@ function bump(id){const i=items[id],S=i.season||1,seen={...(i.seen||{})},a=new S
 
 
 function smartOk(i){
-  const f=SF,y=+i.info?.year||0;
+  const f=SF,y=+i.info?.year||0,g=genresText(i).toLowerCase();
   if(f.r&&avgR(i)<f.r)return false;if(f.y1&&(!y||y<f.y1))return false;if(f.y2&&(!y||y>f.y2))return false;
-  if(f.g&&!(i.info?.genres||'').toLowerCase().includes(f.g))return false;if(f.t&&!(i.tags||'').toLowerCase().includes(f.t))return false;
+  if(f.g&&!g.includes(f.g))return false;if(f.t&&!(i.tags||'').toLowerCase().includes(f.t))return false;
   if(f.f&&(i.fear||0)<f.f)return false;if(f.s==='1'&&!i.scary)return false;if(f.s==='0'&&i.scary)return false;return true;
 }
 
@@ -235,3 +337,57 @@ uiStep(380, () => {
 const c=localStorage.getItem('wl_cache');
   if(c&&isAuthed()){try{items=JSON.parse(c);render();}catch(e){}}else $('list').innerHTML=Array(6).fill('<div class="sk"></div>').join('');
 });
+
+/* ===== HOVER-ПРЕВЬЮ (ПК) =====
+   Наводишь на карточку — справа появляется блок с постером, жанрами, описанием и быстрыми действиями.
+   Работает только там, где есть настоящий курсор: тач-устройства не трогаем. */
+const canHover=()=>matchMedia('(hover:hover) and (min-width:900px)').matches;
+let hoverT=null,hoverEl=null;
+
+function hideHover(){const b=$('hover');if(b)b.classList.remove('show');hoverEl=null;}
+
+function hoverShow(el){
+  if(!canHover())return;
+  const i=items[el.dataset.id];if(!i)return;
+  let box=$('hover');
+  if(!box){document.body.insertAdjacentHTML('beforeend','<div id="hover" class="hover-card"></div>');box=$('hover');}
+  const gs=genresOf(i).slice(0,6).map(t=>`<span class="tg">${esc(t)}</span>`).join('');
+  const desc=cleanDesc(i.info&&i.info.desc||'');
+  box.innerHTML=`${i.poster?`<img class="hover-poster" src="${esc(i.poster)}" onerror="this.remove()">`:''}
+    <div class="hover-body">
+      <div class="hover-title">${esc(i.title)}</div>
+      <div class="hover-meta">${[i.info&&i.info.year,i.info&&i.info.score?'⭐ '+esc(i.info.score):'',i.total?i.total+' эп.':''].filter(Boolean).join(' · ')}</div>
+      ${gs?`<div class="chips">${gs}</div>`:''}
+      ${desc?`<div class="hover-desc">${esc(desc.slice(0,420))}${desc.length>420?'…':''}</div>`:''}
+      <div class="hover-acts">
+        <button class="filter-btn" onclick="setStatus('${i.id}','watching')">▶ Смотрю</button>
+        <button class="filter-btn" onclick="hideHover();openInfo('${i.id}')">Открыть</button>
+        ${EP.includes(i.cat)?`<button class="filter-btn" onclick="bump('${i.id}')">+1</button>`:''}
+      </div>
+    </div>`;
+  box.classList.add('show');
+  const r=el.getBoundingClientRect(),w=box.offsetWidth,h=box.offsetHeight;
+  let x=r.right+12,y=r.top;
+  if(x+w>innerWidth-8)x=r.left-w-12;
+  if(x<8)x=8;
+  y=Math.min(Math.max(8,y),Math.max(8,innerHeight-h-8));
+  box.style.left=x+'px';box.style.top=y+'px';
+}
+
+document.addEventListener('mouseover',e=>{
+  if(!canHover())return;
+  const el=e.target.closest?e.target.closest('.item[data-id],.trow[data-id]'):null;
+  if(!el||el===hoverEl)return;
+  if(hoverEl&&hoverEl.contains(e.relatedTarget))return;
+  hoverEl=el;clearTimeout(hoverT);
+  hoverT=setTimeout(()=>hoverShow(el),280);
+});
+document.addEventListener('mouseout',e=>{
+  const el=e.target.closest?e.target.closest('.item[data-id],.trow[data-id]'):null;
+  if(!el)return;
+  if(el.contains(e.relatedTarget))return;
+  clearTimeout(hoverT);hoverT=setTimeout(hideHover,160);
+});
+addEventListener('scroll',()=>{clearTimeout(hoverT);hideHover();},{passive:true});
+addEventListener('resize',hideHover);
+document.addEventListener('keydown',e=>{if(e.key==='Escape')hideHover();});

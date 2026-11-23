@@ -40,10 +40,27 @@ function itemSearchScore(query, i) {
   const q = String(query || '').toLowerCase().trim();
   if (!q) return 1;
   const title = String(i.title || '').toLowerCase();
-  const fields = [title, String(i.note || ''), String(i.tags || ''), String(i.info?.genres || ''), String(i.coll || '')];
+  const fields = [title, String(i.note || ''), String(i.tags || ''), genresOf(i).join(' ').toLowerCase(), String(i.coll || '')];
   let best = fuzzyScore(q, title) * 2;   // совпадение в названии важнее
   for (let k = 1; k < fields.length; k++) best = Math.max(best, fuzzyScore(q, fields[k]));
   return best;
+}
+
+/* ===== ЖАНРЫ =====
+   Раньше info.genres был строкой через запятую. Теперь источники отдают массив,
+   а старые записи в базе — строку. genresOf() скрывает эту разницу. */
+function genresOf(i) {
+  const g = i && i.info && i.info.genres;
+  if (Array.isArray(g)) return g.map(x => String(x || '').trim()).filter(Boolean);
+  return String(g || '').split(',').map(s => s.trim()).filter(Boolean);
+}
+
+// жанры одной строкой — для поиска, фильтров и подписей
+function genresText(i) { return genresOf(i).join(', '); }
+
+function normTitle(s) {
+  return String(s || '').toLowerCase().replace(/ё/g, 'е')
+    .replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
 }
 
 function toast(msg,undo){

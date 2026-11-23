@@ -369,3 +369,61 @@ body.glow .item{box-shadow:0 0 var(--glow) var(--glowc),var(--card-shadow)}
 
 /* ===== Экраны «Сегодня» и «Состояние» ===== */
 #todayBody .br span,#statusBody .br span{overflow:visible;white-space:normal}
+
+/* ===== TABLE VIEW (ПК) ===== */
+body.cmp .trow{padding:8px 12px!important}
+.thead{display:grid;grid-template-columns:26px 80px 1fr 130px 90px 90px 110px 170px 160px 46px;font-size:11px;color:var(--text3);margin:0 0 6px;align-items:center;border-bottom:1px solid var(--border-color);padding-bottom:4px;opacity:.7}
+.trow{display:grid;grid-template-columns:26px 80px 1fr 130px 90px 90px 110px 170px 160px 46px;gap:8px;align-items:center;background:var(--card-bg);border:var(--border-width) solid var(--border-color);border-radius:var(--border-radius);padding:8px 12px;transition:background .15s;cursor:pointer}
+.trow.done{background:var(--done-bg);border-color:rgba(34,197,94,.2);opacity:.75}.trow.done .title{text-decoration:line-through;opacity:.55}
+.trow.sel{outline:2px solid var(--accent);box-shadow:0 0 0 4px var(--accent-glow)}
+.trow:hover{background:var(--card-hover)}
+.tcell{c:white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;font-size:13px;color:var(--card-text)}
+.tcell.genres{font-size:12px;color:var(--card-meta-text);overflow:visible}.tcell.genres .tg{margin:0 3px 0 0}
+.tcell.title{font-weight:600;font-size:14px;min-width:0}
+.tcell.title .item-title{white-space:normal;overflow:visible;text-overflow:unset}
+.tcell.c{font-size:12px;color:var(--text2)}
+.tcell.act{justify-content:flex-end}.ph{width:100%;height:100%;object-fit:cover;background:rgba(255,255,255,.06);border-radius:6px}
+
+/* ===== HOVER PREVIEW (ПК) ===== */
+#hover{position:fixed;z-index:100;pointer-events:none;transition:opacity .15s, transform .15s;opacity:0;transform:translateY(6px)}
+#hover.show{opacity:1;transform:none;pointer-events:auto}
+.hover-card{background:var(--card-bg);border:var(--border-width) solid var(--border-color);border-radius:var(--border-radius);box-shadow:var(--card-shadow);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);width:320px;padding:14px;display:flex;flex-direction:column;gap:10px}
+.hover-poster{width:90px;height:130px;object-fit:cover;border-radius:10px}
+.hover-body{flex:1;min-width:0}
+.hover-title{font-weight:600;font-size:15px;color:var(--card-text);white-space:normal;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.hover-meta{font-size:11px;color:var(--text2);margin-top:4px}
+.hover-desc{font-size:12px;color:var(--text2);line-height:1.45;max-height:130px;overflow:auto;margin-top:8px}
+.hover-acts{margin-top:6px;display:flex;gap:6px}
+.hover-acts .filter-btn{flex:1}
+
+/* ===== MULTI-SELECT ===== */
+.tsel{flex-shrink:0}.tsel input{width:18px;height:18px;accent-color:var(--accent)}
+.item.sel{outline:2px solid var(--accent);box-shadow:0 0 0 4px var(--accent-glow);border-color:var(--accent)!important}
+.selbar{position:fixed;top:8px;left:50%;transform:translateX(-50%);z-index:100;display:flex;gap:8px;align-items:center;background:var(--header-bg);border-bottom:1px solid var(--border-color);padding:6px 14px;border-radius:0 0 14px 14px;box-shadow:0 4px 20px rgba(0,0,0,0.4);backdrop-filter:blur(16px)}
+.selbar-n{font-size:13px;font-weight:600;color:var(--text2);margin-right:10px}
+.selbar .filter-btn{font-size:12px;padding:4px 10px}
+.selbar .filter-btn:last-child{color:var(--del);border-color:rgba(244,63,94,.3)}
+
+/* ===== SPLIT VIEW (ПК) ===== */
+body.split #mainApp{grid-template-columns:1fr 420px;grid-template-rows:auto 1fr;gap:16px;align-items:start}
+body.split .content{height:100%}
+body.split #info{position:static;opacity:1!important;visibility:visible!important;pointer-events:auto!important}
+body.split .info-overlay{background:var(--bg2);border-left:1px solid var(--border-color);border-radius:16px;padding:16px 16px 24px;overflow-y:auto;display:flex;flex-direction:column}
+body.split #info .modal{background:none;border:none;box-shadow:none;width:100%;height:100%;display:flex;flex-direction:column}
+body.split .info-overlay{padding-top:0}
+body.split .info-desc{max-height:none;overflow:visible}
+body.split .cp-tabs{display:none!important}
+
+/* ===== MODAL TWO-COLUMN ON DESKTOP ===== */
+@media(min-width:900px){
+  .modal{grid-template-columns:minmax(200px,1fr) 1fr;gap:20px;align-items:start}
+  .modal > .field:first-child{grid-column:1/-1}
+  .modal.modal-2col{display:grid}
+}
+
+/* ===== HEADER / TOOLBAR ===== */
+.header-right{display:flex;align-items:center;gap:10px}
+.sync-row{display:flex;align-items:center;gap:8px;margin-right:10px}
+.sync-dot{width:8px;height:8px;border-radius:50%;background:#fff;box-shadow:0 0 8px #fff}
+.sync-dot.loading{background:var(--text3);animation:pulse 1.5s infinite}
+@keyframes pulse{0%,100%{opacity:.6}50%{opacity:1}}

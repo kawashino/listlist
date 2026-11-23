@@ -15,16 +15,33 @@ function addCmt(){
 }
 
 async function openInfo(id){
-  const i=items[id];if(!i)return;infoId=id;$('info').classList.add('open');drawInfo();
-  if(!i.info||!i.info.ts||(!i.info.poster&&!i.poster)){const inf=await findInfo(i),c=items[id];if(c)patch(id,{info:inf,poster:c.poster||inf.poster||'',total:c.total||inf.eps||0});}
+  const i=items[id];if(!i)return;infoId=id;
+  if(document.body.classList.contains('split')){
+    $('info').classList.add('open');
+    document.body.classList.add('info-open');
+    const wrap=document.querySelector('.info-overlay');
+    if(!wrap){document.body.insertAdjacentHTML('beforeend','<div id="infoWrap" class="info-overlay"></div>');}
+  } else {
+    $('info').classList.add('open');
+    document.body.classList.add('info-open');
+  }
+  drawInfo();
+  // обновляем, если данных нет, они старше месяца или нет описания/жанров/постера
+  const age=i.info&&i.info.upd?Date.now()-i.info.upd:Infinity;
+  const stale=!i.info||!i.info.ts||age>30*864e5||!cleanDesc(i.info.desc)||!genresOf(i).length||(!i.poster&&!i.info.poster);
+  if(stale){
+    const inf=await findInfo(i),c=items[id];
+    if(c)patch(id,{info:{...(c.info||{}),...inf,ts:1},poster:c.poster||inf.poster||'',franchise:c.franchise||inf.franchise||'',total:c.total||inf.eps||0});
+  }
 }
 
 function showTrl(){$('trl').innerHTML=`<iframe src="${esc(items[infoId].info.trailer)}" allowfullscreen style="width:100%;aspect-ratio:16/9;border:0;border-radius:10px"></iframe>`;}
 
 function drawInfoMain(){
   const i=items[infoId],f=i.info||{},rc=i.reacts||{},pic=i.poster||f.poster;
-  $('infoBody').innerHTML=`<div style="display:flex;gap:12px">${pic?`<img class="poster" style="width:90px;height:128px" src="${esc(pic)}">`:''}<div><h3 style="margin:0 0 6px">${esc(i.title)}</h3><div class="chips">${f.year?`<span>${esc(f.year)}</span>`:''}${f.genres?`<span>${esc(f.genres)}</span>`:''}${f.score?`<span class="rt">⭐ ${f.score}</span>`:''}</div></div></div>
-  ${f.desc?`<p style="font-size:13px;color:var(--text2);line-height:1.5;max-height:140px;overflow:auto">${esc(f.desc)}</p>`:(f.ts?'':'<p style="color:var(--text3)">Загружаю описание…</p>')}
+  const gs=genresOf(i);
+  $('infoBody').innerHTML=`<div style="display:flex;gap:12px">${pic?`<img class="poster" style="width:90px;height:128px" src="${esc(pic)}">`:''}<div><h3 style="margin:0 0 6px">${esc(i.title)}</h3><div class="chips">${f.year?`<span>${esc(f.year)}</span>`:''}${gs.map(g=>`<span class="tg">${esc(g)}</span>`).join('')}${f.score?`<span class="rt">⭐ ${esc(f.score)}</span>`:''}</div></div></div>
+  ${f.desc?`<p class="info-desc" style="font-size:13px;color:var(--text2);line-height:1.5;max-height:140px;overflow:auto">${esc(f.desc)}</p>`:(f.ts?'':'<p style="color:var(--text3)">Загружаю описание…</p>')}
   ${f.trailer?`<div id="trl"><button class="upload-btn" onclick="showTrl()">▶️ Трейлер</button></div>`:''}
   <div class="cr" style="margin:10px 0"><span class="cl">Дата просмотра</span><input type="date" value="${esc(i.watched_on||'')}" onchange="patch('${i.id}',{watched_on:this.value})"><label style="font-size:12px"><input type="checkbox" ${i.together?'checked':''} onchange="patch('${i.id}',{together:this.checked})"> вместе</label></div>
   <div class="chips">${['👍','😂','😱','😢','🔥'].map(e=>{const n=rc[e]||[];return `<span class="stb" style="${n.includes(ME)?'outline:1px solid var(--accent)':''}" onclick="react('${i.id}','${e}')">${e} ${n.length||''}</span>`;}).join('')}</div>
@@ -34,10 +51,33 @@ function drawInfoMain(){
 
 function bars(o,max){return Object.entries(o).map(([k,v])=>`<div class="br"><span>${esc(k)}</span><div class="bw"><i style="width:${Math.max(3,v/max*100)}%"></i></div><b>${v}</b></div>`).join('');}
 
+/* ===== ЖАНРЫ И ФРАНШИЗА В ОКНЕ КАРТОЧКИ ===== */
+function drawGenresEdit(){
+  const i=items[infoId];if(!i)return;
+  const g=genresOf(i).join(', ');
+  $('infoBody').insertAdjacentHTML('beforeend',`<div class="field" style="margin-top:10px"><label>Жанры (через запятую)</label>
+    <input id="fGenres" class="cp-select" value="${esc(g)}" placeholder="хоррор, романтика"
+      onchange="patch('${i.id}',{info:Object.assign({},items['${i.id}'].info||{},{genres:this.value.split(',').map(s=>s.trim()).filter(Boolean)})})">
+  </div>`);
+}
+
+function drawFranchise(){
+  const i=items[infoId];if(!i||!i.franchise)return;
+  const parts=Object.values(items).filter(x=>x.franchise===i.franchise).sort((a,b)=>(a.season||1)-(b.season||1)||(a.ts||0)-(b.ts||0));
+  if(parts.length<2)return;
+  const done=parts.filter(x=>sOf(x)==='done').length;
+  const row=x=>`<div class="br" style="gap:8px;margin:6px 0;${x.id===i.id?'outline:1px solid var(--accent);border-radius:8px':''}">
+    ${x.poster?`<img class="poster" style="width:28px;height:40px" src="${esc(x.poster)}" onerror="this.remove()">`:''}
+    <span style="flex:1;width:auto;cursor:pointer" onclick="openInfo('${x.id}')">${esc(x.title)}</span>
+    <span class="stb" onclick="cycleStatus('${x.id}')">${ST[sOf(x)]}</span></div>`;
+  $('infoBody').insertAdjacentHTML('beforeend',
+    `<div class="cs-title" style="margin-top:12px">🔗 Франшиза «${esc(i.franchise)}» · ${done}/${parts.length}</div>${parts.map(row).join('')}`);
+}
+
 function stats(){
   const all=Object.values(items),done=all.filter(i=>sOf(i)==='done'),yr=new Date().getFullYear(),cats={},g={},m={},rt={};
   getAllCats().forEach(c=>cats[c.name]=done.filter(i=>i.cat===c.id).length);
-  done.forEach(i=>(i.info?.genres||'').split(',').map(x=>x.trim()).filter(Boolean).forEach(x=>g[x]=(g[x]||0)+1));
+  done.forEach(i=>genresOf(i).forEach(x=>g[x]=(g[x]||0)+1));
   const top=Object.fromEntries(Object.entries(g).sort((a,b)=>b[1]-a[1]).slice(0,6));
   for(let k=1;k<=12;k++)m[k]=0;done.forEach(i=>{const d=new Date(i.watched_on||i.ts);if(d.getFullYear()===yr)m[d.getMonth()+1]++;});
   all.forEach(i=>Object.entries(i.ratings||{}).forEach(([n,v])=>(rt[n]=rt[n]||[]).push(v)));
@@ -70,7 +110,7 @@ function infoEpisodesAndFear(){
 
 function infoArchiveButton(){const i=items[infoId];if(i)$('infoBody').insertAdjacentHTML('beforeend',`<div style="margin-top:12px"><button class="upload-btn" onclick="patch(infoId,{archived:!items[infoId].archived})">📦 ${i.archived?'Вернуть из архива':'В архив'}</button></div>`);}
 
-function drawInfo(){drawInfoMain();infoPosterPicker();infoEpisodesAndFear();infoArchiveButton();applyPosterColor();}
+function drawInfo(){drawInfoMain();infoPosterPicker();infoEpisodesAndFear();drawFranchise();drawGenresEdit();infoArchiveButton();applyPosterColor();if(document.body.classList.contains('split')&&!document.getElementById('infoClose')){const b=document.createElement('button');b.id='infoClose';b.className='btn-icon del';b.title='Закрыть карточку';b.textContent='✕';b.onclick=closeModal;b.style.position='absolute';b.style.top='10px';b.style.right='12px';b.style.zIndex='2';$('infoBody')?.parentElement?.insertAdjacentElement('beforebegin',b);}}
 
 /* Цвета из постера: средний яркий цвет обложки подкрашивает окно карточки. Работает, если сайт-источник картинки разрешает чтение пикселей. */
 function posterColor(url){

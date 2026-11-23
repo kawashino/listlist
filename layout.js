@@ -2,8 +2,7 @@
 
 document.head.insertAdjacentHTML('beforeend','<style id="userCss"></style>');
 
-const UI0={glow:0,glowC:'#7c5cfc',grad:false,gA:'#7c5cfc',gB:'#ec4899',par:false,parS:20,css:'',nav:false,fabL:false,hide:true,cols:2,dens:1,vib:true,video:''};
-
+const UI0={glow:0,glowC:'#7c5cfc',grad:false,gA:'#7c5cfc',gB:'#ec4899',par:false,parS:20,css:'',nav:false,fabL:false,hide:true,cols:2,dens:1,vib:true,video:'',split:false};
 const U=()=>{if(!C.ui)C.ui={};for(const k in UI0)if(!(k in C.ui))C.ui[k]=UI0[k];return C.ui;};
 
 function applyUiCore(){
@@ -71,6 +70,7 @@ function applyUiLayout(){
   r.setProperty('--tl',u.tl);r.setProperty('--bs',u.btnS+'px');r.setProperty('--pw',u.pw+'px');r.setProperty('--ph',Math.round(u.pw*1.4)+'px');
   b.toggle('side',u.layout==='side');b.toggle('gal',u.view==='gal');b.toggle('cmp',u.view==='cmp');b.toggle('nop',!u.showPoster);b.toggle('non',!u.showNotes);
   b.toggle('nch',!u.showChips);b.toggle('chipsw',!!u.chipsWrap);b.toggle('acth',!!u.actHover);b.toggle('tools-open',u.tools==='show'||!!u.toolsOpen);
+  b.toggle('split',u.split&&innerWidth>=1200);
   const lg=document.querySelector('.logo > span:not(.logo-icon)');if(lg)lg.innerHTML=u.logo?esc(u.logo):'наш <span>список</span>';
   document.title=u.logo||'Наш список';const sy=document.querySelector('.sync-row');if(sy)sy.style.display=u.showSync?'':'none';
   placeSide();
@@ -83,6 +83,7 @@ function placeSide(){
   const side=document.body.classList.contains('side')&&innerWidth>=1000,ct=document.querySelector('.content'),st=$('statsBar'),tb=document.querySelector('.toolbar');
   if(side){sb.append(st,tl);}else if(tl.parentElement===sb){ct.insertBefore(st,tb);tb.after(tl);}
   document.body.classList.toggle('sideon',side);
+  document.body.classList.toggle('split',U().split&&innerWidth>=1200);
 }
 
 addEventListener('resize',placeSide);
@@ -93,10 +94,11 @@ function drawMoreLayout(){
   $('moreBody').insertAdjacentHTML('afterbegin',`<div class="cs"><div class="cs-title">Вид и расположение</div>
    ${rw('Расположение',sl('layout',[['top','Классика'],['side','Боковая панель (ПК)']]))}
    ${rw('Инструменты',sl('tools',[['collapse','Сворачиваемые (⋯)'],['show','Всегда видны']]))}
-   ${rw('Вид карточек',sl('view',[['list','Список'],['gal','Галерея постеров'],['cmp','Компактно']]))}
+   ${rw('Вид карточек',sl('view',[['list','Список'],['gal','Галерея постеров'],['cmp','Компактно'],['table','Таблица']]))}
    ${rw('Колонок на телефоне',sl('colsM',[[1,'1'],[2,'2']]))}
    ${rw('Постер в галерее',rg('galMin',110,260,10))}${rw('Постер в списке',rg('pw',30,120,2))}
    ${rw('Ширина страницы (ПК)',rg('maxw',700,1600,20))}${rw('Отступ карточек',rg('gap',4,24,2))}
+   ${rw('Split view (список + карта, ПК)',tg('split'))}
    ${rw('Строк в названии',rg('tl',1,3))}${rw('Размер кнопок',rg('btnS',22,42,2))}
    ${rw('Постеры',tg('showPoster'))}${rw('Заметки',tg('showNotes'))}${rw('Метки (статус, оценки…)',tg('showChips'))}
    ${rw('Метки в несколько строк',tg('chipsWrap'))}${rw('Кнопки по наведению (ПК)',tg('actHover'))}${rw('Статус синхронизации',tg('showSync'))}${rw('Цвета из постера (карточка)',tg('posterColor'))}

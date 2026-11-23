@@ -65,11 +65,20 @@ async function doImport(){
 
 // ===== ГОРЯЧИЕ КЛАВИШИ =====
 // Одиночные клавиши работают только вне полей ввода; Ctrl/Cmd — везде.
+let focusedId=null;
+function getItemOrder(){return [...document.querySelectorAll('.item[data-id],.trow[data-id]')].map(el=>el.dataset.id);}
+function focusItemById(id){const el=document.querySelector(`.item[data-id="${id}"],.trow[data-id="${id}"]`);if(el){el.focus();el.scrollIntoView({block:'nearest',inline:'nearest'});focusedId=id;}}
+
 addEventListener('keydown',e=>{
   const inField=/INPUT|TEXTAREA|SELECT/.test(e.target.tagName),mod=e.ctrlKey||e.metaKey,k=e.key.toLowerCase();
   if(mod&&e.key==='Enter'){const ov=$('overlay');if(ov&&ov.classList.contains('open')){e.preventDefault();saveItem();}return;}
   if(mod&&k==='k'){e.preventDefault();$('searchInput').focus();$('searchInput').select();return;}
   if(inField||mod||e.altKey)return;
+  if(k==='arrowdown'){e.preventDefault();const order=getItemOrder();let i=focusedId?order.indexOf(focusedId):-1;if(i<0)i=0;else i=Math.min(i+1,order.length-1);focusItemById(order[i]);return;}
+  if(k==='arrowup'){e.preventDefault();const order=getItemOrder();let i=focusedId?order.indexOf(focusedId):-1;if(i<0)i=order.length-1;else i=Math.max(i-1,0);focusItemById(order[i]);return;}
+  if(k==='enter'){e.preventDefault();if(focusedId)openInfo(focusedId);return;}
+  if(k===' '){e.preventDefault();if(focusedId)toggleDone(focusedId);return;}
+  if(k==='x'){e.preventDefault();if(focusedId)setStatus(focusedId,'archived');return;}
   if(k==='n'){e.preventDefault();openModal();}else if(k==='/'){e.preventDefault();$('searchInput').focus();}else if(k==='r')roulette();else if(k==='s')stats();else if(k==='f')$('flt').classList.add('open');
   else if(k==='?')showShortcuts();
   else if(k==='escape')document.querySelectorAll('.overlay.open').forEach(o=>o.classList.remove('open'));

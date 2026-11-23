@@ -414,7 +414,7 @@ function rebuildCatSelect(){
 }
 
 // ===== MODAL =====
-function closeModal(){document.getElementById('overlay').classList.remove('open');editingId=null;}
+function closeModal(){const ov=document.getElementById('overlay');ov.classList.remove('open');ov.classList.remove('modal-2col');editingId=null;if(!document.body.classList.contains('split')){document.body.classList.remove('info-open');document.getElementById('info')?.classList.remove('open');}}
 function maybeClose(e){if(e.target===document.getElementById('overlay'))closeModal();}
 
 // ===== CUSTOM CATS =====

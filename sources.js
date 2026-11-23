@@ -13,56 +13,222 @@ async function upPoster(inp){const f=inp.files[0];if(!f)return;try{$('fPoster').
 
 const J=async u=>(await fetch(u)).json();
 
+/* ===== ИСТОЧНИКИ =====
+   Каждый источник возвращает массив кандидатов с едиными полями:
+   title, poster, year, genres (массив), desc, score, eps, trailer, franchise, relations. */
 const SRC={
-  async shiki(q){
+  // Shikimori: у аниме/манги есть поле franchise, у детальной записи — genres, description и related
+  async shiki(q,cat){
+    const kind=cat==='manga'?'mangas':cat==='ranobe'?'ranobe':'animes';
     for(const h of ['shikimori.one','shikimori.me','shikimori.io']){
-      try{const a=await J(`https://${h}/api/animes?limit=4&search=${encodeURIComponent(q)}`);
-        const r=a.map(x=>({title:x.russian||x.name,poster:x.image?.original?`https://${h}${x.image.original}`:'',year:(x.aired_on||'').slice(0,4),score:+x.score||'',eps:x.episodes||0}));
-        if(a[0]){try{const d=await J(`https://${h}/api/animes/${a[0].id}`);r[0].genres=(d.genres||[]).map(g=>g.russian||g.name).join(', ');r[0].desc=(d.description||'').replace(/\[[^\]]*\]/g,'').slice(0,600);}catch(e){}}
-        return r;}catch(e){}
+      try{
+        const a=await J(`https://${h}/api/${kind}?limit=4&search=${encodeURIComponent(q)}`);
+        const r=a.map(x=>({id:x.id,title:x.russian||x.name,poster:x.image?.original?`https://${h}${x.image.original}`:'',
+          year:(x.aired_on||'').slice(0,4),score:+x.score||'',eps:x.episodes||x.chapters||0,
+          genres:[],desc:'',franchise:x.franchise||'',relations:[]}));
+        if(a[0]){
+          try{
+            const d=await J(`https://${h}/api/${kind}/${a[0].id}`);
+            r[0].genres=(d.genres||[]).map(g=>g.russian||g.name).filter(Boolean);
+            r[0].desc=cleanDesc(d.description);
+            r[0].franchise=d.franchise||r[0].franchise||'';
+            r[0].relations=(d.related||[]).map(x=>({name:x.russian||x.name||'',relation:'related'}));
+            if(!r[0].year)r[0].year=(d.aired_on||'').slice(0,4);
+          }catch(e){}
+        }
+        return r;
+      }catch(e){}
     }return[];
   },
-  async jikan(q){try{return((await J('https://api.jikan.moe/v4/anime?limit=4&q='+encodeURIComponent(q))).data||[]).map(x=>({title:x.title_english||x.title,poster:x.images?.jpg?.image_url||'',year:x.year||'',genres:(x.genres||[]).map(g=>g.name).join(', '),desc:x.synopsis||'',score:x.score||'',eps:x.episodes||0,trailer:x.trailer?.embed_url||''}));}catch(e){return[];}},
-  async itunes(q,cat){try{const m=cat==='series'?'tvShow':'movie',e=cat==='series'?'tvSeason':'movie';
-    return((await J(`https://itunes.apple.com/search?term=${encodeURIComponent(q)}&media=${m}&entity=${e}&country=ru&limit=4`)).results||[]).map(x=>({title:x.trackName||x.collectionName,poster:(x.artworkUrl100||'').replace('100x100bb','400x600bb'),year:(x.releaseDate||'').slice(0,4),genres:x.primaryGenreName||'',desc:x.longDescription||x.shortDescription||''}));}catch(e){return[];}},
+
+  // Jikan: large_image_url вместо image_url; relations подтягиваем для первого кандидата
+  async jikan(q){
+    try{
+      const d=await J('https://api.jikan.moe/v4/anime?limit=4&q='+encodeURIComponent(q));
+      const list=(d.data||[]).map(x=>({id:x.mal_id,title:x.title_english||x.title,
+        poster:x.images?.jpg?.large_image_url||x.images?.jpg?.image_url||'',
+        year:x.year||'',genres:(x.genres||[]).map(g=>g.name),desc:cleanDesc(x.synopsis),
+        score:x.score||'',eps:x.episodes||0,trailer:x.trailer?.embed_url||'',relations:[]}));
+      if(list[0]){
+        try{
+          const rel=await J(`https://api.jikan.moe/v4/anime/${list[0].id}/relations`);
+          list[0].relations=(rel.data||[]).flatMap(g=>(g.entry||[]).map(e=>({name:e.name||'',relation:g.relation||''})));
+        }catch(e){}
+      }
+      return list;
+    }catch(e){return[];}
+  },
+
+  // AniList: extraLarge-постер, seasonYear, averageScore (переводим в 10), relations
+  async anilist(q,cat){
+    const t=(cat==='manga'||cat==='ranobe'||cat==='MANGA')?'MANGA':'ANIME';
+    try{
+      const r=await fetch('https://graphql.anilist.co',{
+        method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({query:`query($q:String,$t:MediaType){Page(perPage:4){media(search:$q,type:$t){
+          id title{romaji english} coverImage{extraLarge large} description(asHtml:false)
+          episodes seasonYear averageScore genres
+          relations{edges{relationType node{title{romaji english}}}}
+          trailer{id site}
+        }}}`,variables:{q,t}})
+      });
+      const j=await r.json();
+      return ((j.data&&j.data.Page&&j.data.Page.media)||[]).map(x=>({
+        id:x.id,title:x.title?.english||x.title?.romaji||'',
+        poster:x.coverImage?.extraLarge||x.coverImage?.large||'',
+        year:x.seasonYear||'',genres:x.genres||[],
+        desc:cleanDesc(x.description),score:x.averageScore?+(x.averageScore/10).toFixed(1):'',
+        eps:x.episodes||0,
+        trailer:x.trailer&&x.trailer.site==='youtube'?'https://www.youtube.com/embed/'+x.trailer.id:'',
+        relations:(x.relations&&x.relations.edges||[]).map(e=>({
+          name:(e.node&&e.node.title&&(e.node.title.english||e.node.title.romaji))||'',relation:e.relationType||''}))
+      }));
+    }catch(e){return[];}
+  },
+
+  async itunes(q,cat){
+    try{
+      const m=cat==='series'?'tvShow':'movie',e=cat==='series'?'tvSeason':'movie';
+      return ((await J(`https://itunes.apple.com/search?term=${encodeURIComponent(q)}&media=${m}&entity=${e}&country=ru&limit=4`)).results||[])
+        .map(x=>({title:x.trackName||x.collectionName,
+          poster:(x.artworkUrl100||'').replace('100x100bb','600x600bb'),
+          year:(x.releaseDate||'').slice(0,4),genres:x.primaryGenreName?[x.primaryGenreName]:[],
+          desc:cleanDesc(x.longDescription||x.shortDescription||'')}));
+    }catch(e){return[];}
+  },
+
   async wiki(q,cat){
     const w={anime:'аниме',films:'фильм',series:'сериал',games:'игра'}[cat]||'';
     for(const l of ['ru','en']){
-      try{const d=await J(`https://${l}.wikipedia.org/w/api.php?action=query&generator=search&gsrlimit=4&gsrsearch=${encodeURIComponent(q+' '+(l==='ru'?w:''))}&prop=pageimages|extracts&piprop=thumbnail&pithumbsize=300&exintro=1&explaintext=1&exsentences=3&format=json&origin=*`);
-        const r=Object.values(d.query?.pages||{}).sort((a,b)=>a.index-b.index).map(p=>({title:p.title,poster:p.thumbnail?.source||'',desc:p.extract||''})).filter(x=>x.poster);
+      try{const d=await J(`https://${l}.wikipedia.org/w/api.php?action=query&generator=search&gsrlimit=4&gsrsearch=${encodeURIComponent(q+' '+(l==='ru'?w:''))}&prop=pageimages|extracts&piprop=thumbnail&pithumbsize=300&exintro=1&explaintext=1&exsentences=4&format=json&origin=*`);
+        const r=Object.values(d.query?.pages||{}).sort((a,b)=>a.index-b.index).map(p=>({title:p.title,poster:p.thumbnail?.source||'',desc:cleanDesc(p.extract),genres:[]})).filter(x=>x.poster);
         if(r.length)return r;}catch(e){}
     }return[];
   }
 };
 
+/* ===== ОБЪЕДИНЕНИЕ КАНДИДАТОВ ===== */
+const SRC_PRIORITY={shiki:6,shikiM:6,jikan:5,anilist:5,itunes:4,wiki:3,ol:3};
+
+function cleanDesc(s){
+  return String(s||'').replace(/<[^>]*>/g,' ').replace(/\[[^\]]*\]/g,' ').replace(/\s+/g,' ').trim();
+}
+
+function mergeGenres(lists){
+  const out=[],seen=new Set();
+  lists.forEach(list=>(list||[]).forEach(g=>{
+    const s=String(g||'').trim();if(!s)return;
+    const k=s.toLowerCase();if(seen.has(k))return;
+    seen.add(k);out.push(s);
+  }));
+  return out.slice(0,12);
+}
+
+function pickLongestDesc(list){
+  return list.map(c=>cleanDesc(c.desc)).sort((a,b)=>b.length-a.length)[0]||'';
+}
+
+// Оценка кандидата: точное название важнее всего, дальше — постер, описание, жанры, рейтинг
+function scoreCand(c,q){
+  let s=SRC_PRIORITY[c._src]||2;
+  const t=normTitle(c.title);
+  if(t&&t===q)s+=40;
+  else if(t&&(t.startsWith(q)||q.startsWith(t)))s+=18;
+  else if(t&&t.indexOf(q)>=0)s+=10;
+  if(c.poster)s+=8;
+  if(c.desc)s+=Math.min(12,Math.round(c.desc.length/60));
+  if((c.genres||[]).length)s+=4;
+  if(c.year)s+=3;
+  if(c.score)s+=3;
+  return s;
+}
+
+// Проверка, что картинка реально открывается: CORS не нужен, хватает naturalWidth
+const posterProbe=new Map();
+function probeImage(url){
+  if(!url)return Promise.resolve(false);
+  if(posterProbe.has(url))return Promise.resolve(posterProbe.get(url));
+  return new Promise(res=>{
+    const im=new Image();let done=false;
+    const finish=v=>{if(done)return;done=true;clearTimeout(t);posterProbe.set(url,v);res(v);};
+    const t=setTimeout(()=>finish(false),4000);
+    im.onload=()=>finish(im.naturalWidth>=50);
+    im.onerror=()=>finish(false);
+    im.src=url;
+  });
+}
+
+async function pickPoster(list){
+  for(const c of list){if(c.poster&&await probeImage(c.poster))return c.poster;}
+  return '';
+}
+
+// Франшиза: явное поле источника, иначе самый частый «родственник» (обычно корень серии)
+function franchiseFrom(list){
+  const explicit=list.map(x=>x.franchise).filter(Boolean);
+  if(explicit.length){
+    const c={};explicit.forEach(f=>{const k=f.toLowerCase();c[k]=(c[k]||0)+1;});
+    const best=Object.keys(c).sort((a,b)=>c[b]-c[a])[0];
+    return explicit.find(f=>f.toLowerCase()===best)||explicit[0];
+  }
+  const names=[];
+  list.forEach(x=>(x.relations||[]).forEach(r=>{
+    if(r&&r.name&&/sequel|prequel|side|spin|alternative|character|summary|full|parent/i.test(r.relation||''))names.push(r.name);
+  }));
+  if(!names.length)return '';
+  const c={};names.forEach(n=>{const k=n.toLowerCase();c[k]=(c[k]||0)+1;});
+  const best=Object.keys(c).sort((a,b)=>c[b]-c[a])[0];
+  return names.find(n=>n.toLowerCase()===best)||names[0];
+}
+
 async function candsStd(q,cat){
-  const o=cat==='anime'?['shiki','jikan','wiki']:cat==='games'?['wiki']:['itunes','wiki'],out=[];
-  for(const k of o){out.push(...(await SRC[k](q,cat)).filter(x=>x.poster));if(out.length>=6)break;}
-  return out;
+  const o=cat==='anime'?['shiki','jikan','anilist','wiki']:cat==='games'?['wiki']:['itunes','wiki'];
+  const res=await Promise.allSettled(o.map(k=>SRC[k](q,cat)));
+  const out=[];
+  res.forEach((r,k)=>{if(r.status==='fulfilled')(r.value||[]).forEach(x=>out.push({...x,_src:o[k]}));});
+  return out.filter(x=>x.poster);
 }
 
 // ===== КЭШ СПРАВОЧНЫХ ДАННЫХ =====
-// lookup() дёргает 2–3 внешних API; без кэша одно и то же название ищется заново при каждом открытии формы.
-const PCACHE_KEY = 'wl_pcache', PCACHE_TTL = 24 * 60 * 60 * 1000, PCACHE_MAX = 400;
-function pcacheAll() { try { return JSON.parse(localStorage.getItem(PCACHE_KEY) || '{}'); } catch (e) { return {}; } }
-function pcacheGet(q, cat) {
-  const e = pcacheAll()[(cat || '') + '|' + String(q).toLowerCase()];
-  return e && Date.now() - e.ts < PCACHE_TTL ? e.v : null;
+// lookup() дёргает 2–4 внешних API; без кэша одно и то же название ищется заново при каждом открытии формы.
+const PCACHE_KEY='wl_pcache',PCACHE_TTL=24*60*60*1000,PCACHE_MAX=400,PCACHE_V='v2|';
+function pcacheKey(q,cat){return PCACHE_V+(cat||'')+'|'+normTitle(q);}
+function pcacheAll(){try{return JSON.parse(localStorage.getItem(PCACHE_KEY)||'{}');}catch(e){return {};}}
+function pcacheGet(q,cat){
+  const e=pcacheAll()[pcacheKey(q,cat)];
+  return e&&Date.now()-e.ts<PCACHE_TTL?e.v:null;
 }
-function pcacheSet(q, cat, v) {
-  const c = pcacheAll(), k = (cat || '') + '|' + String(q).toLowerCase();
-  c[k] = { ts: Date.now(), v };
-  const keys = Object.keys(c);
-  if (keys.length > PCACHE_MAX) keys.slice(0, keys.length - PCACHE_MAX).forEach(x => delete c[x]);
-  try { localStorage.setItem(PCACHE_KEY, JSON.stringify(c)); } catch (e) {}
+function pcacheSet(q,cat,v){
+  const c=pcacheAll(),k=pcacheKey(q,cat);
+  c[k]={ts:Date.now(),v};
+  const keys=Object.keys(c);
+  if(keys.length>PCACHE_MAX)keys.slice(0,keys.length-PCACHE_MAX).forEach(x=>delete c[x]);
+  try{localStorage.setItem(PCACHE_KEY,JSON.stringify(c));}catch(e){}
 }
 
 async function lookup(i){
-  const hit = pcacheGet(i.title, i.cat);
-  if (hit) return hit;
-  const b = (await cands(i.title, i.cat))[0] || {};
-  const out = { ts:1, poster:b.poster||'', year:b.year||'', genres:b.genres||'', desc:b.desc||'', score:b.score||'', eps:b.eps||0, trailer:b.trailer||'' };
-  pcacheSet(i.title, i.cat, out);
+  const hit=pcacheGet(i.title,i.cat);
+  if(hit)return hit;
+
+  const q=normTitle(i.title);
+  const raw=await cands(i.title,i.cat);
+  const ranked=raw.map(c=>({c,s:scoreCand(c,q)})).sort((a,b)=>b.s-a.s);
+  const top=ranked.slice(0,3).map(x=>x.c);
+  const first=ranked.length?ranked[0].c:{};
+
+  const out={
+    ts:1,
+    poster:await pickPoster(top),
+    year:first.year||'',
+    genres:mergeGenres(top.map(c=>c.genres||[])),
+    desc:pickLongestDesc(top),
+    score:first.score||'',
+    eps:Math.max(0,...top.map(c=>+c.eps||0)),
+    trailer:top.map(c=>c.trailer).find(Boolean)||'',
+    franchise:franchiseFrom(raw),
+    upd:Date.now()
+  };
+  pcacheSet(i.title,i.cat,out);
   return out;
 }
 
@@ -70,13 +236,24 @@ async function findPoster(q,cat){return(await lookup({title:q,cat})).poster;}
 
 async function findInfo(i){return lookup(i);}
 
+// Дозаполняет всё, чего не хватает: постер, описание, жанры, франшизу, число серий
 async function fillPosters(){
-  const todo=Object.values(items).filter(i=>!i.poster);let n=0,ok=0;toast('Ищу постеры…');
-  for(const i of todo){const f=await lookup(i);n++;
-    if(f.poster){items[i.id]={...i,poster:f.poster,info:f,total:i.total||f.eps||0};ok++;try{await upsertItem(items[i.id]);}catch(e){}}
-    if(n%4==0){render();toast(`Постеры: ${ok} из ${n} (всего ${todo.length})`);}
-    await new Promise(r=>setTimeout(r,700));}
-  render();toast(`Готово: найдено ${ok} из ${n}`);
+  const need=i=>!i.poster||!i.info||!i.info.ts||!cleanDesc(i.info.desc)||!genresOf(i).length||!i.franchise;
+  const todo=Object.values(items).filter(need);
+  if(!todo.length){toast('Всё уже заполнено');return;}
+  let n=0,ok=0;toast('Дозаполняю данные…');
+  for(const i of todo){
+    const cur=items[i.id];if(!cur)continue;
+    const f=await lookup(cur);n++;
+    const nz=Object.fromEntries(Object.entries(f).filter(([,v])=>v!==''&&v!=null&&!(Array.isArray(v)&&!v.length)));
+    const info={...(cur.info||{}),...nz,ts:1};
+    items[i.id]={...cur,poster:cur.poster||nz.poster||'',franchise:cur.franchise||nz.franchise||'',total:cur.total||nz.eps||0,info};
+    if(nz.poster||nz.desc||nz.genres)ok++;
+    try{await upsertItem(items[i.id]);}catch(e){}
+    if(n%4===0){render();toast(`Дозаполнено: ${ok} из ${n} (всего ${todo.length})`);}
+    await new Promise(r=>setTimeout(r,600));
+  }
+  render();toast(`Готово: обновлено ${ok} из ${n}`);
 }
 
 async function pickPoster(){
@@ -113,20 +290,37 @@ function onTitle(){
 
 function takePick(k){
   const x=window._cs[k];_pick=x;$('inputTitle').value=x.title||$('inputTitle').value;$('fPoster').value=x.poster||'';
-  if(!$('fTotal').value&&x.eps)$('fTotal').value=x.eps;if(x.cat)$('inputCat').value=x.cat;if(x.url&&!$('inputLink').value)$('inputLink').value=x.url;
+  if(!$('fTotal').value&&x.eps)$('fTotal').value=x.eps;
+  if(x.cat)$('inputCat').value=x.cat;
+  if(x.url&&!$('inputLink').value)$('inputLink').value=x.url;
+  // франшизу подставляем только если поле пустое: ручное значение важнее
+  const fr=$('fFr');
+  if(fr&&!fr.value.trim()&&x.franchise)fr.value=x.franchise;
   $('sug').innerHTML='';
 }
 
-SRC.ol=async q=>{try{return((await J('https://openlibrary.org/search.json?limit=4&q='+encodeURIComponent(q))).docs||[]).filter(d=>d.cover_i).map(d=>({title:d.title,poster:`https://covers.openlibrary.org/b/id/${d.cover_i}-M.jpg`,year:d.first_publish_year||'',genres:(d.author_name||[]).slice(0,2).join(', ')}));}catch(e){return[];}};
+SRC.ol=async q=>{try{return((await J('https://openlibrary.org/search.json?limit=4&q='+encodeURIComponent(q))).docs||[]).filter(d=>d.cover_i).map(d=>({title:d.title,poster:`https://covers.openlibrary.org/b/id/${d.cover_i}-M.jpg`,year:d.first_publish_year||'',genres:(d.author_name||[]).slice(0,2),desc:'',eps:0}));}catch(e){return[];}};
 
-SRC.shikiM=async(q,k)=>{try{return(await J(`https://shikimori.one/api/${k==='ranobe'?'ranobe':'mangas'}?limit=4&search=${encodeURIComponent(q)}`)).map(x=>({title:x.russian||x.name,poster:x.image?.original?'https://shikimori.one'+x.image.original:'',year:(x.aired_on||'').slice(0,4),score:+x.score||'',eps:x.chapters||0}));}catch(e){return[];}};
+SRC.shikiM=async(q,k)=>{try{return(await J(`https://shikimori.one/api/${k==='ranobe'?'ranobe':'mangas'}?limit=4&search=${encodeURIComponent(q)}`)).map(x=>({title:x.russian||x.name,poster:x.image?.original?'https://shikimori.one'+x.image.original:'',year:(x.aired_on||'').slice(0,4),score:+x.score||'',eps:x.chapters||0,genres:[],desc:'',franchise:x.franchise||''}));}catch(e){return[];}};
 
-async function cands(q,cat){const k=cat==='manga'?'manga':(C.customCats||[]).find(c=>c.id===cat)?.kind;if(k==='books')return(await SRC.ol(q)).filter(x=>x.poster);if(k==='manga'||k==='ranobe')return(await SRC.shikiM(q,k)).filter(x=>x.poster);return candsStd(q,cat);}
+async function cands(q,cat){
+  const k=cat==='manga'?'manga':(C.customCats||[]).find(c=>c.id===cat)?.kind;
+  if(k==='books')return(await SRC.ol(q)).filter(x=>x.poster).map(x=>({...x,_src:'ol'}));
+  if(k==='manga'||k==='ranobe'){
+    const src=[['shikiM',SRC.shikiM],['shiki',SRC.shiki],['anilist',SRC.anilist]];
+    const res=await Promise.allSettled(src.map(([,fn])=>fn(q,k)));
+    const out=[];
+    res.forEach((r,i)=>{if(r.status==='fulfilled')(r.value||[]).forEach(x=>out.push({...x,_src:src[i][0]}));});
+    return out.filter(x=>x.poster);
+  }
+  return candsStd(q,cat);
+}
 
 async function autoRefresh(){
   const week=6048e5,todo=Object.values(items).filter(i=>sOf(i)!=='done'&&(!i.info||!i.info.upd||Date.now()-i.info.upd>week)).slice(0,6);
-  for(const i of todo){const f=await lookup(i),cur=items[i.id];if(!cur)continue;const nz=Object.fromEntries(Object.entries(f).filter(([,v])=>v));
-    items[i.id]={...cur,info:{...cur.info,...nz,ts:1,upd:Date.now()},poster:cur.poster||f.poster||'',total:cur.total||f.eps||0};
+  for(const i of todo){const f=await lookup(i),cur=items[i.id];if(!cur)continue;
+    const nz=Object.fromEntries(Object.entries(f).filter(([,v])=>v!==''&&v!=null&&!(Array.isArray(v)&&!v.length)));
+    items[i.id]={...cur,info:{...cur.info,...nz,ts:1,upd:Date.now()},poster:cur.poster||f.poster||'',franchise:cur.franchise||f.franchise||'',total:cur.total||f.eps||0};
     try{await upsertItem(items[i.id]);}catch(e){}await new Promise(r=>setTimeout(r,1500));}
   render();
 }
@@ -174,7 +368,8 @@ async function repairLinkTitles(){   // уже сохранённые карто
   for(const i of bad){
     const c=(await linkCands(i.title))[0],cur=items[i.id];if(!cur)continue;
     items[i.id]={...cur,link:cur.link||i.title,title:(c&&c.title)||slugTitle(i.title),poster:cur.poster||(c&&c.poster)||'',cat:(c&&c.cat)||cur.cat,total:cur.total||(c&&c.eps)||0,
-      info:c?{ts:1,year:c.year||'',genres:c.genres||'',desc:c.desc||'',score:c.score||'',trailer:c.trailer||''}:cur.info};
+      franchise:cur.franchise||(c&&c.franchise)||'',
+      info:c?{ts:1,year:c.year||'',genres:c.genres||[],desc:c.desc||'',score:c.score||'',trailer:c.trailer||''}:cur.info};
     try{await upsertItem(items[i.id]);}catch(e){}
   }
   if(bad.length){render();toast('Исправлены названия-ссылки: '+bad.length);}
