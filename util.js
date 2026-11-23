@@ -74,4 +74,8 @@ function toast(msg,undo){
    Номер задаёт порядок запуска: он важен там, где несколько модулей вставляют элементы в одно место (например, кнопки в панель над списком). */
 const UI_STEPS=[];
 function uiStep(order,fn){UI_STEPS.push([order,fn]);}
-function runUiSteps(){UI_STEPS.sort((a,b)=>a[0]-b[0]).forEach(([,fn])=>fn());}
+function runUiSteps(){
+  UI_STEPS.sort((a,b)=>a[0]-b[0]).forEach(([order,fn])=>{
+    try{fn();}catch(e){console.warn('uiStep '+order+' failed:',e.message||e);}
+  });
+}
