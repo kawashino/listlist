@@ -322,6 +322,28 @@ async function fromLink(u){
     if(m=u.match(/kinopoisk\.\w+\/(?:film|series)\/(\d+)/)){const w=await wdByStatement('P2603',m[1]);if(w)return{...w,url:u};}
     if(m=u.match(/imdb\.com\/title\/(tt\d+)/)){const w=await wdByStatement('P345',m[1]);if(w)return{...w,url:u};}
     if(m=u.match(/letterboxd\.com\/film\/([^/]+)/)){const c=await cands(m[1].replace(/-/g,' '),'films');return c[0]?{...c[0],cat:'films',url:u}:null;}
+    // Steam: точное определение игры по ссылке магазина (высокий приоритет)
+    if(m=u.match(/store\.steampowered\.com\/(?:app|bundle)\/(\d+)/)){
+      try{
+        const d=await J(`https://store.steampowered.com/api/appdetails?appids=${m[1]}`);
+        const data=d&&d[m[1]]&&d[m[1]].success?d[m[1]].data:null;
+        if(data){
+          const genres=(data.genres||[]).map(g=>g.description||g.name);
+          const rd=(data.release_date&&data.release_date.date)?new Date(data.release_date.date).getFullYear():'';
+          return{title:data.name,poster:data.header_image||'',year:rd,genres:genres.join(', '),
+            desc:(data.short_description||data.about_the_game||'').replace(/<[^>]*>/g,'').slice(0,800),score:'',eps:0,cat:'games',url:u};
+        }
+      }catch(e){}
+    }
+    // GOG: игра по ссылке каталога
+    if(m=u.match(/gog\.com\/(?:en|ru)\/game\/([a-z0-9-]+)/)){
+      try{
+        const d=await J(`https://www.gog.com/games/ajax/filtered?mediaArray=none&page=1&sort=popularity&search=${m[1]}`);
+        // GOG API нестабилен, fallback на поиск по слагу
+      }catch(e){}
+      const c=await cands(m[1].replace(/-/g,' '),'games');
+      return c[0]?{...c[0],cat:'games',url:u}:null;
+    }
   }catch(e){}
   return null;
 }

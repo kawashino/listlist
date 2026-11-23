@@ -192,6 +192,23 @@ async function saveItem(){
   const poster0=$('fPoster').value.trim(), cat=$('inputCat').value||currentTab;
   const problem=validateItemForm({title,link,poster:poster0,cat,id:editingId});
   if(problem){ if(problem==='__cancel__')return; toast(problem); $('inputTitle').focus(); return; }
+
+  // Высокий приоритет: распознать по ссылке (Steam, Википедия, Shikimori, IMDb и т.п.)
+  let linkInfo=null;
+  if(link&&isUrl(link)&&!_pick){
+    try{linkInfo=await fromLink(link);}catch(e){}
+    if(linkInfo){
+      if(!title)title=linkInfo.title;
+      if((cat==='films'||cat==='series')){
+        if(!titleRu&&isCyr(linkInfo.title))titleRu=linkInfo.title;
+        if(!titleEn&&isLat(linkInfo.title))titleEn=linkInfo.title;
+        if(!titleOrig&&!isCyr(linkInfo.title)&&!isLat(linkInfo.title))titleOrig=linkInfo.title;
+      }
+      if(!poster0&&linkInfo.poster)poster0=linkInfo.poster;
+      _pick=linkInfo;
+    }
+  }
+
   const old=editingId?items[editingId]:null,st=$('fStatus').value,rate=parseFloat($('fRating').value)||0;
   const ratings={...(old&&old.ratings||{})};if(rate>0)ratings[ME]=rate;else delete ratings[ME];
   const btn=$('saveBtn');btn.disabled=true;btn.textContent='Сохраняем...';
