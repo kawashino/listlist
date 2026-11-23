@@ -18,3 +18,18 @@ on('panelOpen', drawMore);
 window.addEventListener('load',()=>{
   runUiSteps();   // вставка полей, кнопок и панелей: шаги лежат в модулях, порядок задают их номера
 });
+
+// ===== ЦЕНТРАЛИЗОВАННЫЙ ОБРАБОТЧИК ОШИБОК =====
+// Ловит ошибки, которые терялись в пустых catch-блоках по всем модулям.
+// Показывает toast вместо молчаливого падения, не прерывая работу приложения.
+window.addEventListener('unhandledrejection', e => {
+  const msg = e.reason?.message || String(e.reason || '').slice(0, 120);
+  console.error('Unhandled rejection:', msg);
+  toast('Ошибка: ' + msg);
+  e.preventDefault();
+});
+window.addEventListener('error', e => {
+  const msg = e.message || String(e || '').slice(0, 120);
+  console.error('Script error:', e.filename, e.lineno, msg);
+  toast('Ошибка скрипта: ' + msg);
+});
