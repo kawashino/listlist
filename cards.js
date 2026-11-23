@@ -178,8 +178,10 @@ function validateItemForm({ title, link, poster, cat, id }) {
 
 async function saveItem(){
   await resolveTitleLink();
-  const title=$('inputTitle').value.trim(), link=$('inputLink').value.trim();
-  const poster0=$('fPoster').value.trim(), cat=$('inputCat').value||currentTab;
+  let title=$('inputTitle').value.trim();
+  const link=$('inputLink').value.trim();
+  let poster0=$('fPoster').value.trim();
+  const cat=$('inputCat').value||currentTab;
   const problem=validateItemForm({title,link,poster:poster0,cat,id:editingId});
   if(problem){ if(problem==='__cancel__')return; toast(problem); $('inputTitle').focus(); return; }
 
