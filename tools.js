@@ -70,7 +70,7 @@ function getItemOrder(){return [...document.querySelectorAll('.item[data-id],.tr
 function focusItemById(id){const el=document.querySelector(`.item[data-id="${id}"],.trow[data-id="${id}"]`);if(el){el.focus();el.scrollIntoView({block:'nearest',inline:'nearest'});focusedId=id;}}
 
 addEventListener('keydown',e=>{
-  const inField=/INPUT|TEXTAREA|SELECT/.test(e.target.tagName),mod=e.ctrlKey||e.metaKey,k=e.key.toLowerCase();
+  const inField=/INPUT|TEXTAREA|SELECT/.test(e.target.tagName),mod=e.ctrlKey||e.metaKey,k=(e.key||'').toLowerCase();
   if(mod&&e.key==='Enter'){const ov=$('overlay');if(ov&&ov.classList.contains('open')){e.preventDefault();saveItem();}return;}
   if(mod&&k==='k'){e.preventDefault();$('searchInput').focus();$('searchInput').select();return;}
   if(inField||mod||e.altKey)return;
@@ -142,7 +142,7 @@ function showToday(){
    +'<div class="cs-title" style="margin-top:14px">Недавно закончили</div>'+(recent.map(row).join('')||'<small style="color:var(--text3)">Пока ничего</small>');
   $('today').classList.add('open');
 }
-addEventListener('keydown',e=>{if(!/INPUT|TEXTAREA|SELECT/.test(e.target.tagName)&&!e.ctrlKey&&!e.metaKey&&!e.altKey&&e.key.toLowerCase()==='t')showToday();});
+addEventListener('keydown',e=>{if(!/INPUT|TEXTAREA|SELECT/.test(e.target.tagName)&&!e.ctrlKey&&!e.metaKey&&!e.altKey&&(e.key||'').toLowerCase()==='t')showToday();});
 function buildExtraUi(){
   const cl="if(event.target===this)this.classList.remove('open')";
   document.body.insertAdjacentHTML('beforeend',`<div id="status" class="overlay" onclick="${cl}"><div class="modal" id="statusBody"></div></div><div id="today" class="overlay" onclick="${cl}"><div class="modal" id="todayBody"></div></div>`);
