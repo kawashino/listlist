@@ -126,11 +126,11 @@ header { background:var(--header-bg); border-bottom:1px solid var(--border-color
 @media(min-width:700px) { #list { grid-template-columns:repeat(2,1fr); } }
 
 /* ITEM */
-.item { background:var(--card-bg); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); border-radius:var(--border-radius); display:flex; align-items:flex-start; gap:12px; padding:13px 14px; border:var(--border-width) solid var(--border-color); box-shadow:var(--card-shadow); transition:background .15s, transform .15s, box-shadow .15s; overflow:hidden; animation:itemIn .25s ease both; }
+.item { background:var(--card-bg); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); border-radius:var(--border-radius); display:flex; align-items:center; gap:12px; padding:13px 14px; border:var(--border-width) solid var(--border-color); box-shadow:var(--card-shadow); transition:background .15s, transform .15s, box-shadow .15s; overflow:hidden; animation:itemIn .25s ease both; }
 @keyframes itemIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
 .item:hover { background:var(--card-hover); transform:translateY(-1px); box-shadow:0 6px 20px rgba(0,0,0,0.4); }
 .item.done { background:var(--done-bg); border-color:rgba(34,197,94,.2); }
-.check { width:28px; height:28px; border-radius:50%; border:2px solid rgba(255,255,255,0.15); cursor:pointer; flex-shrink:0; display:flex; align-items:center; justify-content:center; transition:border-color .2s, background .2s, transform .15s; font-size:14px; overflow:hidden; }
+.check { width:28px; height:28px; border-radius:50%; border:2px solid rgba(255,255,255,0.15); cursor:pointer; flex-shrink:0; display:flex; align-items:center; justify-content:center; transition:border-color .2s, background .2s, transform .15s; font-size:14px; overflow:hidden; margin-top:4px; }
 .check:hover { transform:scale(1.1); border-color:var(--done); }
 .check img { width:100%; height:100%; object-fit:cover; border-radius:50%; }
 .item.done .check { background:var(--done); border-color:var(--done); }
@@ -304,7 +304,7 @@ input[type=file] { display:none; }
 /* ===== Стили, раньше вставлявшиеся из JS (часть 3б). Порядок блоков сохранён. ===== */
 /* ===== из buildInterface: стили, раньше вставлялись из JS ===== */
 #fxCanvas{position:fixed;inset:0;z-index:0;pointer-events:none}
-  .item{position:relative}.poster{display:block;width:46px;height:64px;object-fit:cover;border-radius:8px;flex-shrink:0;vertical-align:top}
+  .item{position:relative}.poster{display:block;width:46px;height:64px;object-fit:cover;border-radius:8px;flex-shrink:0;vertical-align:top;margin-top:-6px}
   .chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:5px;align-items:center}
   .chips>*{font-size:11px;padding:2px 8px;border-radius:20px;background:rgba(255,255,255,.07);color:var(--text2)}
   .stb{cursor:pointer}.chips .rt{color:#facc15}.chips .tg{background:var(--accent-glow);color:var(--accent2)}
