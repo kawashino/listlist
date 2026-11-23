@@ -145,11 +145,18 @@ function cycleStatus(id){const k=Object.keys(ST);setStatus(id,k[(k.indexOf(sOf(i
 function fillForm(i){
   const v=(id,x)=>$(id).value=x??'';
   $('modalTitle').textContent=i.id?'Редактировать':'Добавить';
-  v('inputTitle',i.title);v('inputNote',i.note);v('inputLink',i.link);
+  v('inputTitle',i.title);v('inputTitleRu',i.titleRu);v('inputTitleEn',i.titleEn);v('inputTitleOrig',i.titleOrig);
+  v('inputNote',i.note);v('inputLink',i.link);
   rebuildCatSelect();$('inputCat').value=i.cat||currentTab;
+  toggleTitleFields($('inputCat').value||currentTab);
   v('fStatus',sOf(i));v('fSeason',i.season||'');v('fEpisode',i.episode||'');v('fTotal',i.total||'');
   v('fRating',(i.ratings||{})[ME]||'');v('fTags',i.tags);v('fPoster',i.poster);v('fColl',i.coll);_pick=null;$('sug').innerHTML='';v('fFr',i.franchise);
   $('overlay').classList.add('open');setTimeout(()=>$('inputTitle').focus(),80);
+}
+
+function toggleTitleFields(cat){
+  const show=cat==='films'||cat==='series';
+  for(const id of ['fTitleRu','fTitleEn','fTitleOrig'])$(id).style.display=show?'':'none';
 }
 
 function openModal(){editingId=null;fillForm({});pasteLink(true);if(innerWidth>=900)$('overlay').classList.add('modal-2col');else $('overlay').classList.remove('modal-2col');}
@@ -179,6 +186,9 @@ function validateItemForm({ title, link, poster, cat, id }) {
 async function saveItem(){
   await resolveTitleLink();
   const title=$('inputTitle').value.trim(), link=$('inputLink').value.trim();
+  const titleRu=$('inputTitleRu')?$('inputTitleRu').value.trim():'';
+  const titleEn=$('inputTitleEn')?$('inputTitleEn').value.trim():'';
+  const titleOrig=$('inputTitleOrig')?$('inputTitleOrig').value.trim():'';
   const poster0=$('fPoster').value.trim(), cat=$('inputCat').value||currentTab;
   const problem=validateItemForm({title,link,poster:poster0,cat,id:editingId});
   if(problem){ if(problem==='__cancel__')return; toast(problem); $('inputTitle').focus(); return; }
@@ -189,7 +199,7 @@ async function saveItem(){
   if(!poster)poster=await findPoster(title,cat);
   const base=old||{id:Date.now().toString(36)+Math.random().toString(36).slice(2,6),ts:Date.now(),added_by:ME};
   const genres=_pick&&_pick.genres?_pick.genres:[];
-  const item={...base,cat,title,note:$('inputNote').value.trim(),link:$('inputLink').value.trim(),status:st,done:st==='done',
+  const item={...base,cat,title,titleRu,titleEn,titleOrig,note:$('inputNote').value.trim(),link:$('inputLink').value.trim(),status:st,done:st==='done',
     season:+$('fSeason').value||0,episode:+$('fEpisode').value||0,total:+$('fTotal').value||0,ratings,tags:$('fTags').value.trim(),poster,
     coll:$('fColl').value.trim(),
     franchise:$('fFr').value.trim()||(_pick&&_pick.franchise)||'',

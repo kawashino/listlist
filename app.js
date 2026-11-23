@@ -411,6 +411,8 @@ function rebuildCatSelect(){
   const sel=document.getElementById('inputCat'); if(!sel)return;
   sel.innerHTML=getAllCats().map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
   sel.value=currentTab;
+  sel.onchange=()=>toggleTitleFields(sel.value);
+  toggleTitleFields(sel.value);
 }
 
 // ===== MODAL =====

@@ -226,6 +226,43 @@ async function lookup(i){
   const top=ranked.slice(0,3).map(x=>x.c);
   const first=ranked.length?ranked[0].c:{};
 
+  // Для фильмов и сериалов пробуем альтернативные названия (русское → английское → оригинальное),
+  // если основной поиск не дал результата с постером/описанием.
+  let altUsed='';
+  if((i.cat==='films'||i.cat==='series')&&(!first.poster||!first.desc)){
+    const alt=[i.titleRu||'',i.titleEn||'',i.titleOrig||''].filter(Boolean).map(normTitle);
+    for(const aq of alt){
+      if(!aq||aq===q)continue;
+      const ra=await cands(aq,i.cat);
+      if(!ra.length)continue;
+      const rankedAlt=ra.map(c=>({c,s:scoreCand(c,aq)})).sort((a,b)=>b.s-a.s);
+      const topAlt=rankedAlt.slice(0,3).map(x=>x.c);
+      const firstAlt=rankedAlt.length?rankedAlt[0].c:{};
+      // Берём альтернативу, если она дала постер или описание, а основное нет
+      if(firstAlt.poster||firstAlt.desc){
+        const merged=[...top,...topAlt].filter((v,k,a)=>a.findIndex(x=>x&&x.title===v.title&&x._src===v._src)===k);
+        const rankedM=merged.map(c=>({c,s:scoreCand(c,q)})).sort((a,b)=>b.s-a.s);
+        const topM=rankedM.slice(0,3).map(x=>x.c);
+        const firstM=rankedM.length?rankedM[0].c:{};
+        const out={
+          ts:1,
+          poster:await pickPoster(topM),
+          year:firstM.year||first.year||'',
+          genres:mergeGenres(topM.map(c=>c.genres||[])),
+          desc:pickLongestDesc(topM),
+          score:firstM.score||first.score||'',
+          eps:Math.max(0,...topM.map(c=>+c.eps||0)),
+          trailer:topM.map(c=>c.trailer).find(Boolean)||first.trailer||'',
+          franchise:franchiseFrom(merged),
+          upd:Date.now()
+        };
+        pcacheSet(i.title,i.cat,out);
+        return out;
+      }
+    }
+    altUsed=alt.join(' / ');
+  }
+
   const out={
     ts:1,
     poster:await pickPoster(top),
@@ -294,7 +331,19 @@ function onTitle(){
   if(editingId||v.length<2){box.innerHTML='';return;}
   sugT=setTimeout(async()=>{
     box.textContent='Ищу…';
-    const c=/^https?:\/\//.test(v)?await linkCands(v):await cands(v,$('inputCat').value||currentTab);
+    const cat=$('inputCat').value||currentTab;
+    let c=/^https?:\/\//.test(v)?await linkCands(v):await cands(v,cat);
+    // Для фильмов и сериалов пробуем альтернативные названия, если основное не дало результатов
+    if(!c.length&&(cat==='films'||cat==='series')){
+      const ru=$('inputTitleRu')?$('inputTitleRu').value.trim():'';
+      const en=$('inputTitleEn')?$('inputTitleEn').value.trim():'';
+      const orig=$('inputTitleOrig')?$('inputTitleOrig').value.trim():'';
+      for(const aq of [ru,en,orig].filter(Boolean)){
+        if(aq===v)continue;
+        const ra=await cands(aq,cat);
+        if(ra.length){c=ra;break;}
+      }
+    }
     if(!c.length){box.textContent=/^https?:/.test(v)?'Для этой ссылки нет открытого API. Введи название':'Ничего не нашлось';return;}
     if(c.length===1&&c[0].exact){window._cs=c;takePick(0);toast('Распознано: '+c[0].title);return;}
     window._cs=c;box.innerHTML=c.slice(0,6).map((x,k)=>`<div class="pick2" onclick="takePick(${k})"><img src="${esc(x.poster)}"><span>${esc(x.title||'')}${x.year?' · '+x.year:''}</span></div>`).join('');
@@ -302,11 +351,19 @@ function onTitle(){
 }
 
 function takePick(k){
-  const x=window._cs[k];_pick=x;$('inputTitle').value=x.title||$('inputTitle').value;$('fPoster').value=x.poster||'';
+  const x=window._cs[k];_pick=x;$('inputTitle').value=x.title||$('inputTitle').value;
   if(!$('fTotal').value&&x.eps)$('fTotal').value=x.eps;
   if(x.cat)$('inputCat').value=x.cat;
   if(x.url&&!$('inputLink').value)$('inputLink').value=x.url;
-  // франшизу подставляем только если поле пустое: ручное значение важнее
+  // Автозаполнение полей названий по алфавиту picked-кандидата (для фильмов/сериалов)
+  const cat=$('inputCat').value||currentTab;
+  if((cat==='films'||cat==='series')&&x.title){
+    const isCyr=/[а-яё]/i.test(x.title);
+    const isLat=/[a-z]/i.test(x.title);
+    if(isCyr&&!$('inputTitleRu').value.trim())$('inputTitleRu').value=x.title;
+    if(isLat&&!$('inputTitleEn').value.trim())$('inputTitleEn').value=x.title;
+    if(!isCyr&&!isLat&&!$('inputTitleOrig').value.trim())$('inputTitleOrig').value=x.title;
+  }
   const fr=$('fFr');
   if(fr&&!fr.value.trim()&&x.franchise)fr.value=x.franchise;
   $('sug').innerHTML='';
