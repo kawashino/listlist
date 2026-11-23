@@ -304,7 +304,7 @@ input[type=file] { display:none; }
 /* ===== Стили, раньше вставлявшиеся из JS (часть 3б). Порядок блоков сохранён. ===== */
 /* ===== из buildInterface: стили, раньше вставлялись из JS ===== */
 #fxCanvas{position:fixed;inset:0;z-index:0;pointer-events:none}
-  .item{position:relative}.poster{width:46px;height:64px;object-fit:cover;border-radius:8px;flex-shrink:0}
+  .item{position:relative}.poster{display:block;width:46px;height:64px;object-fit:cover;border-radius:8px;flex-shrink:0}
   .chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:5px;align-items:center}
   .chips>*{font-size:11px;padding:2px 8px;border-radius:20px;background:rgba(255,255,255,.07);color:var(--text2)}
   .stb{cursor:pointer}.chips .rt{color:#facc15}.chips .tg{background:var(--accent-glow);color:var(--accent2)}
