@@ -307,7 +307,7 @@ $('overlay').querySelector('.btn-row').insertAdjacentHTML('beforebegin',`
    <div class="field"><label>Статус</label><select id="fStatus">${Object.entries(ST).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select></div>
    <div class="field row3"><div><label>Сезон</label><input id="fSeason" type="number" min="0"></div><div><label>Серия</label><input id="fEpisode" type="number" min="0"></div><div><label>Всего серий</label><input id="fTotal" type="number" min="0"></div></div>
    <div class="field"><label>Моя оценка (1–10)</label><input id="fRating" type="number" min="0" max="10" step="0.5"></div>
-   <div class="field"><label>Теги через запятую</label><input id="fTags" placeholder="хоррор, романтика"><button type="button" class="upload-btn" onclick="trTags()">Перевести теги → RU</button></div>
+   <div class="field"><label>Теги через запятую</label><input id="fTags" placeholder="хоррор, романтика"></div>
    <div class="field"><label>Постер (ссылка)</label><input id="fPoster" placeholder="https://… (у аниме найдётся сам)"></div>`);
 });
 uiStep(120, () => {
@@ -389,17 +389,6 @@ function hoverShow(el){
   if(x<8)x=8;
   y=Math.min(Math.max(8,y),Math.max(8,innerHeight-h-8));
   box.style.left=x+'px';box.style.top=y+'px';
-}
-
-async function trTitle(){
-  const el=$('inputTitle');if(!el||!el.value.trim())return;
-  el.blur();const orig=el.value;const tr=await translateToRu(orig);if(tr&&tr!==orig)el.value=tr;
-}
-async function trTags(){
-  const el=$('fTags');if(!el||!el.value.trim())return;
-  el.blur();const orig=el.value;const parts=orig.split(',').map(s=>s.trim()).filter(Boolean);
-  const trs=await Promise.all(parts.map(p=>translateToRu(p)));
-  el.value=trs.join(', ');
 }
 
 document.addEventListener('mouseover',e=>{

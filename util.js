@@ -70,24 +70,6 @@ function toast(msg,undo){
   clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),6000);
 }
 
-/* Перевод с любого языка на русский через бесплатный endpoint Google Translate (без API-ключа).
-   Кэширует результат в localStorage, чтобы не запрашивать одно и то же дважды. */
-async function translateToRu(text){
-  const s=String(text||'').trim();if(!s)return s;
-  const key='wl_tr_'+btoa(encodeURIComponent(s)).replace(/[^A-Za-z0-9]/g,'_').slice(0,80);
-  try{const cached=localStorage.getItem(key);if(cached)return cached;}catch(e){}
-  try{
-    const url='https://translate.googleapis.com/translate_a/t?client=gtx&sl=auto&tl=ru&q='+encodeURIComponent(s);
-    const r=await fetch(url,{method:'GET',headers:{'Accept-Language':'ru-RU,ru;q=0.9'}});
-    const d=await r.json();
-    let out='';
-    if(d&&d[0])for(const part of d[0])if(part[0])out+=part[0];
-    out=out.trim()||s;
-    try{localStorage.setItem(key,out);}catch(e){}
-    return out;
-  }catch(e){return s;}
-}
-
 /* Шаги сборки интерфейса: каждый модуль регистрирует свои вставки в страницу (поля, кнопки, панели) через uiStep(номер, функция).
    Номер задаёт порядок запуска: он важен там, где несколько модулей вставляют элементы в одно место (например, кнопки в панель над списком). */
 const UI_STEPS=[];
