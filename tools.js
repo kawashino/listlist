@@ -82,13 +82,14 @@ addEventListener('keydown',e=>{
   if(k==='n'){e.preventDefault();openModal();}else if(k==='/'){e.preventDefault();$('searchInput').focus();}else if(k==='r')roulette();else if(k==='s')stats();else if(k==='f')$('flt').classList.add('open');
   else if(k==='?')showShortcuts();
   else if(k==='escape')document.querySelectorAll('.overlay.open').forEach(o=>o.classList.remove('open'));
+  else if(/^[1-5]$/.test(k)){const tabs=getAllCats();const idx=+k-1;if(tabs[idx])setTab(tabs[idx].id);return;}
 });
 
 function showShortcuts(){
-  const rows=[['N','Добавить карточку'],['/ или Ctrl+K','Поиск'],['Ctrl+Enter','Сохранить в форме'],['R','Рулетка «что смотрим»'],['S','Статистика'],['F','Умные фильтры'],['T','Экран «Сегодня»'],['?','Эта подсказка'],['Esc','Закрыть окно']];
+  const rows=[['N','Добавить карточку'],['/ или Ctrl+K','Поиск'],['Ctrl+Enter','Сохранить в форме'],['1–5','Переключить вкладку (1=первая, 5=пятая)'],['R','Рулетка «что смотрим»'],['S','Статистика'],['F','Умные фильтры'],['T','Экран «Сегодня»'],['?','Эта подсказка'],['Esc','Закрыть окно']];
   if(!$('keys'))document.body.insertAdjacentHTML('beforeend','<div id="keys" class="overlay" onclick="if(event.target===this)this.classList.remove(\'open\')"><div class="modal" id="keysBody"></div></div>');
   $('keysBody').innerHTML='<div class="modal-title">⌨️ Горячие клавиши</div>'+rows.map(([k,v])=>`<div class="br"><span style="width:130px;flex:none"><b>${esc(k)}</b></span><span>${esc(v)}</span></div>`).join('')
-    +'<div class="btn-row"><button class="btn btn-primary" onclick="$(\'keys\').classList.remove(\'open\')">Понятно</button></div>';
+    +'<div class="btn-row"><button class="btn btn-primary" onclick="$(\'keys\').classList.remove(\'open\')" title="Закрыть подсказку клавиш">Понятно</button></div>';
   $('keys').classList.add('open');
 }
 
@@ -129,14 +130,14 @@ async function statusReport(){
 async function showStatus(){
   const L=await statusReport();
   $('statusBody').innerHTML='<div class="modal-title">🩺 Состояние</div>'+L.map(([k,v])=>`<div class="br" style="align-items:flex-start"><span style="width:150px;flex:none">${esc(k)}</span><b style="font-weight:500;word-break:break-word">${esc(v)}</b></div>`).join('')
-   +'<div class="btn-row"><button class="btn btn-secondary" onclick="refreshItems().then(showStatus)">Обновить сейчас</button><button class="btn btn-primary" onclick="copyStatus()">Скопировать отчёт</button></div>';
+   +'<div class="btn-row"><button class="btn btn-secondary" onclick="refreshItems().then(showStatus)" title="Перезагрузить данные с сервера">Обновить сейчас</button><button class="btn btn-primary" onclick="copyStatus()" title="Скопировать отчёт о состоянии в буфер">Скопировать отчёт</button></div>';
   $('status').classList.add('open');
 }
 async function copyStatus(){try{await navigator.clipboard.writeText((await statusReport()).map(([k,v])=>k+': '+v).join('\n'));toast('Отчёт скопирован');}catch(e){toast('Не удалось скопировать');}}
 function showToday(){
   const all=Object.values(items).filter(i=>!i.archived),now=all.filter(i=>sOf(i)==='watching'),want=all.filter(i=>sOf(i)==='want'),both=want.filter(i=>Object.keys(i.wants||{}).length>1);
   const next=[...both,...want.filter(i=>!both.includes(i)).sort(()=>Math.random()-.5)].slice(0,3),recent=all.filter(i=>sOf(i)==='done').sort((a,b)=>(b.ts||0)-(a.ts||0)).slice(0,4);
-  const row=i=>`<div class="br" style="gap:10px;margin:8px 0">${i.poster?`<img class="poster" style="width:34px;height:48px" src="${esc(i.poster)}">`:''}<span style="flex:1;width:auto;white-space:normal;cursor:pointer" onclick="openInfo('${i.id}')">${esc(i.title)}${EP.includes(i.cat)&&i.episode?` <small style="color:var(--text3)">· ${i.cat==='manga'?'гл.':'сер.'} ${i.episode}${i.total?'/'+i.total:''}</small>`:''}</span>${EP.includes(i.cat)?`<button class="pp" onclick="bump('${i.id}');showToday()">+1</button>`:''}</div>`;
+  const row=i=>`<div class="br" style="gap:10px;margin:8px 0">${i.poster?`<img class="poster" style="width:34px;height:48px" src="${esc(i.poster)}">`:''}<span style="flex:1;width:auto;white-space:normal;cursor:pointer" onclick="openInfo('${i.id}')">${esc(i.title)}${EP.includes(i.cat)&&i.episode?` <small style="color:var(--text3)">· ${i.cat==='manga'?'гл.':'сер.'} ${i.episode}${i.total?'/'+i.total:''}</small>`:''}</span>${EP.includes(i.cat)?`<button class="pp" onclick="bump('${i.id}');showToday()" title="Отметить следующую серию/главу">+1</button>`:''}</div>`;
   $('todayBody').innerHTML='<div class="modal-title">🏠 Сегодня</div><div class="cs-title">Смотрим сейчас</div>'+(now.map(row).join('')||'<small style="color:var(--text3)">Ничего не в процессе</small>')
    +'<div class="cs-title" style="margin-top:14px">Что дальше'+(both.length?' (💗 хотите оба — первыми)':'')+'</div>'+(next.map(row).join('')||'<small style="color:var(--text3)">В «Хочу» пусто</small>')
    +'<div class="cs-title" style="margin-top:14px">Недавно закончили</div>'+(recent.map(row).join('')||'<small style="color:var(--text3)">Пока ничего</small>');
@@ -146,8 +147,8 @@ addEventListener('keydown',e=>{if(!/INPUT|TEXTAREA|SELECT/.test(e.target.tagName
 function buildExtraUi(){
   const cl="if(event.target===this)this.classList.remove('open')";
   document.body.insertAdjacentHTML('beforeend',`<div id="status" class="overlay" onclick="${cl}"><div class="modal" id="statusBody"></div></div><div id="today" class="overlay" onclick="${cl}"><div class="modal" id="todayBody"></div></div>`);
-  $('tools').insertAdjacentHTML('beforeend','<button class="filter-btn" onclick="showToday()">🏠 Сегодня</button><button class="filter-btn" onclick="showStatus()">🩺 Состояние</button>');
-  $('inputTitle').insertAdjacentHTML('afterend','<button type="button" class="upload-btn" style="margin-top:6px" onclick="pasteLink()">📋 Вставить ссылку из буфера</button>');
+  $('tools').insertAdjacentHTML('beforeend','<button class="filter-btn" onclick="showToday()" title="Экран «Сегодня»: что смотрим, что дальше, что недавно закончили">🏠 Сегодня</button><button class="filter-btn" onclick="showStatus()" title="Состояние приложения: синхронизация, ошибки, кэш">🩺 Состояние</button>');
+  $('inputTitle').insertAdjacentHTML('afterend','<button type="button" class="upload-btn" style="margin-top:6px" onclick="pasteLink()" title="Вставить ссылку из буфера обмена">📋 Вставить ссылку из буфера</button>');
 }
 
 /* ===== Сборка интерфейса этого модуля: шаги выполняются в порядке номеров (uiStep, см. util.js), номера хранят исходный порядок вставки элементов ===== */
@@ -156,7 +157,7 @@ document.body.insertAdjacentHTML('beforeend',`<canvas id="fxCanvas"></canvas><di
   <div id="rou" class="overlay" onclick="if(event.target===this)this.classList.remove('open')"><div class="modal" style="text-align:center">
    <div style="font-size:13px;color:var(--text2)">Сегодня смотрим…</div><div id="rouTitle" class="rou-t">🎲</div>
    <label style="font-size:12px;color:var(--text2)"><input type="checkbox" id="rouAll"> из всех категорий</label>
-   <div class="btn-row"><button class="btn btn-secondary" onclick="$('rou').classList.remove('open')">Закрыть</button><button class="btn btn-primary" onclick="roulette()">Ещё раз</button></div></div></div>`);
+   <div class="btn-row"><button class="btn btn-secondary" onclick="$('rou').classList.remove('open')" title="Закрыть рулетку">Закрыть</button><button class="btn btn-primary" onclick="roulette()" title="Выбрать новую случайную карточку">Ещё раз</button></div></div></div>`);
 });
 uiStep(180, () => {
 if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
@@ -169,9 +170,9 @@ const cl="if(event.target===this)this.classList.remove('open')";
    <div id="imp" class="overlay" onclick="${cl}"><div class="modal"><div class="modal-title">📥 Импорт в текущую категорию</div>
     <div class="field"><label>Названия, по одному в строке</label><textarea id="impText" style="height:110px"></textarea></div>
     <div class="field"><label>или файл: Letterboxd CSV / MyAnimeList XML</label><input type="file" id="impFile" accept=".csv,.xml,.txt" style="display:block"></div>
-    <div class="btn-row"><button class="btn btn-secondary" onclick="$('imp').classList.remove('open')">Закрыть</button><button class="btn btn-primary" onclick="doImport()">Импортировать</button></div></div></div>`);
+    <div class="btn-row"><button class="btn btn-secondary" onclick="$('imp').classList.remove('open')" title="Закрыть импорт">Закрыть</button><button class="btn btn-primary" onclick="doImport()" title="Импортировать карточки из выбранного файла">Импортировать</button></div></div></div>`);
 });
 uiStep(220, () => {
-$('rouAll').parentElement.insertAdjacentHTML('afterend','<br><label style="font-size:12px;color:var(--text2)"><input type="checkbox" id="rouBoth"> только «хотим оба»</label><div id="rouPicks"></div><button class="upload-btn" style="margin-top:8px" onclick="night()">🍿 3 варианта на вечер</button>');
+$('rouAll').parentElement.insertAdjacentHTML('afterend','<br><label style="font-size:12px;color:var(--text2)"><input type="checkbox" id="rouBoth"> только «хотим оба»</label><div id="rouPicks"></div><button class="upload-btn" style="margin-top:8px" onclick="night()" title="Показать 3 варианта на вечер из «Хочу»">🍿 3 варианта на вечер</button>');
 });
 uiStep(1000,buildExtraUi);

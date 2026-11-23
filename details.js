@@ -50,10 +50,10 @@ function drawInfoMain(){
   const gs=genresOf(i);
   $('infoBody').innerHTML=`<div class="info-main"><div class="info-poster">${pic?`<img class="poster" style="width:90px;height:128px" src="${esc(pic)}" onerror="this.remove()">`:''}</div><div class="info-body"><div style="display:flex;align-items:center;gap:8px"><h3 style="margin:0">${esc(i.title)}</h3><button class="upload-btn" onclick="refreshItemInfo('${i.id}')" title="Обновить постер, описание, жанры, франшизу">🔄</button></div><div class="chips">${f.year?`<span>${esc(f.year)}</span>`:''}${gs.map(g=>`<span class="tg">${esc(g)}</span>`).join('')}${f.score?`<span class="rt">⭐ ${esc(f.score)}</span>`:''}</div></div></div>
   ${f.desc?`<p class="info-desc" style="font-size:13px;color:var(--text2);line-height:1.5;max-height:140px;overflow:auto">${esc(f.desc)}</p>`:(f.ts?'':'<p style="color:var(--text3)">Загружаю описание…</p>')}
-  ${f.trailer?`<div id="trl"><button class="upload-btn" onclick="showTrl()">▶️ Трейлер</button></div>`:''}
+  ${f.trailer?`<div id="trl"><button class="upload-btn" onclick="showTrl()" title="Показать трейлер">▶️ Трейлер</button></div>`:''}
   <div class="chips">${['👍','😂','😱','😢','🔥'].map(e=>{const n=rc[e]||[];return `<span class="stb" style="${n.includes(ME)?'outline:1px solid var(--accent)':''}" onclick="react('${i.id}','${e}')">${e} ${n.length||''}</span>`;}).join('')}</div>
   <div style="margin:10px 0">${(i.comments||[]).map(c=>`<div style="font-size:12px;margin:4px 0"><b>${esc(c.by)}:</b> ${esc(c.text)}</div>`).join('')}</div>
-  <div class="cr"><input id="cmt" class="cp-select" placeholder="Комментарий…" onkeydown="if(event.key==='Enter')addCmt()"><button class="upload-btn" onclick="addCmt()">➤</button></div>`;
+  <div class="cr"><input id="cmt" class="cp-select" placeholder="Комментарий…" onkeydown="if(event.key==='Enter')addCmt()"><button class="upload-btn" onclick="addCmt()" title="Отправить комментарий">➤</button></div>`;
 }
 
 function bars(o,max){return Object.entries(o).map(([k,v])=>`<div class="br"><span>${esc(k)}</span><div class="bw"><i style="width:${Math.max(3,v/max*100)}%"></i></div><b>${v}</b></div>`).join('');}
@@ -95,7 +95,7 @@ function stats(){
 }
 
 function infoPosterPicker(){
-  $('infoBody').insertAdjacentHTML('beforeend','<div style="margin-top:12px"><div class="cr"><input id="pq" class="cp-select" placeholder="Название для поиска (англ. или оригинал)"><button class="upload-btn" onclick="pickPoster()">🖼 Найти</button></div><div id="posterPick" class="whgrid" style="margin-top:8px"></div></div>');}
+  $('infoBody').insertAdjacentHTML('beforeend','<div style="margin-top:12px"><div class="cr"><input id="pq" class="cp-select" placeholder="Название для поиска (англ. или оригинал)"><button class="upload-btn" onclick="pickPoster()" title="Найти постер по названию">🖼 Найти</button></div><div id="posterPick" class="whgrid" style="margin-top:8px"></div></div>');}
 
 function togEp(n){
   const i=items[infoId],S=i.season||1,seen={...(i.seen||{})},a=new Set(seen[S]||[]);a.has(n)?a.delete(n):a.add(n);seen[S]=[...a].sort((x,y)=>x-y);
@@ -108,11 +108,11 @@ function setSeason(d){const i=items[infoId],S=Math.max(1,(i.season||1)+d);patch(
 function infoEpisodesAndFear(){
   const i=items[infoId];if(!i)return;
   const S=i.season||1,seen=new Set((i.seen||{})[S]||[]),T=Math.min(+i.total||0,300);let h='';
-  if(EP.includes(i.cat))h+=`<div class="cs-title" style="margin-top:12px">Сезон <button class="upload-btn" onclick="setSeason(-1)">◀</button> ${S} <button class="upload-btn" onclick="setSeason(1)">▶</button> · просмотрено ${seen.size}${T?'/'+T+', осталось '+Math.max(0,T-seen.size):''}</div>`+(T?`<div class="eg">${Array.from({length:T},(_,k)=>`<b class="${seen.has(k+1)?'on':''}" onclick="togEp(${k+1})">${k+1}</b>`).join('')}</div>`:'<small style="color:var(--text3)">Укажи «Всего серий» в форме редактирования</small>');
+  if(EP.includes(i.cat))h+=`<div class="cs-title" style="margin-top:12px">Сезон <button class="upload-btn" onclick="setSeason(-1)" title="Предыдущий сезон">◀</button> ${S} <button class="upload-btn" onclick="setSeason(1)" title="Следующий сезон">▶</button> · просмотрено ${seen.size}${T?'/'+T+', осталось '+Math.max(0,T-seen.size):''}</div>`+(T?`<div class="eg">${Array.from({length:T},(_,k)=>`<b class="${seen.has(k+1)?'on':''}" onclick="togEp(${k+1})">${k+1}</b>`).join('')}</div>`:'<small style="color:var(--text3)">Укажи «Всего серий» в форме редактирования</small>');
   $('infoBody').firstElementChild.insertAdjacentHTML('afterend',h);
 }
 
-function infoArchiveButton(){const i=items[infoId];if(i)$('infoBody').insertAdjacentHTML('beforeend',`<div style="margin-top:12px"><button class="upload-btn" onclick="patch(infoId,{archived:!items[infoId].archived})">📦 ${i.archived?'Вернуть из архива':'В архив'}</button></div>`);}
+function infoArchiveButton(){const i=items[infoId];if(i)$('infoBody').insertAdjacentHTML('beforeend',`<div style="margin-top:12px"><button class="upload-btn" onclick="patch(infoId,{archived:!items[infoId].archived})" title="${i.archived?'Вернуть из архива':'Переместить в архив'}">📦 ${i.archived?'Вернуть из архива':'В архив'}</button></div>`);}
 
 function drawInfo(){drawInfoMain();infoPosterPicker();drawFranchise();drawGenresEdit();infoArchiveButton();applyPosterColor();if(document.body.classList.contains('split')&&!document.getElementById('infoClose')){const b=document.createElement('button');b.id='infoClose';b.className='btn-icon del';b.title='Закрыть карточку';b.textContent='✕';b.onclick=closeModal;b.style.position='absolute';b.style.top='10px';b.style.right='12px';b.style.zIndex='2';$('infoBody')?.parentElement?.insertAdjacentElement('beforebegin',b);}}
 

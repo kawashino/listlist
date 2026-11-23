@@ -18,7 +18,7 @@ function renderList(){
   getAllCats().forEach(c=>{const n=all.filter(i=>i.cat===c.id&&sOf(i)!=='done').length,el=$('badge-'+c.id);if(el){el.textContent=n;el.classList.toggle('show',n>0);}});
   const cat=all.filter(i=>i.cat===currentTab),d=cat.filter(i=>sOf(i)==='done').length;
   [['stat-total',cat.length],['stat-done',d],['stat-left',cat.length-d]].forEach(([id,v])=>{const e=$(id);if(e)e.textContent=v;});
-  if(!arr.length){list.innerHTML=`<div class="empty" style="grid-column:1/-1"><div class="empty-icon">${C.icons?.empty?`<img src="${C.icons.empty}" style="width:64px;height:64px;border-radius:14px;object-fit:cover">`:'📂'}</div><p>Здесь пока пусто</p><button class="btn btn-primary" style="margin-top:14px;max-width:200px" onclick="openModal()">+ Добавить</button></div>`;selBar();return;}
+  if(!arr.length){list.innerHTML=`<div class="empty" style="grid-column:1/-1"><div class="empty-icon">${C.icons?.empty?`<img src="${C.icons.empty}" style="width:64px;height:64px;border-radius:14px;object-fit:cover">`:'📂'}</div><p>Здесь пока пусто</p><button class="btn btn-primary" style="margin-top:14px;max-width:200px" onclick="openModal()" title="Добавить новую карточку в текущую категорию">+ Добавить</button></div>`;selBar();return;}
   const ic=C.icons||{};
   lastTotal=arr.length;arr=arr.slice(0,shown);
 
@@ -32,7 +32,7 @@ function renderList(){
 
   list.innerHTML=arr.map(i=>{
     const st=sOf(i),rs=Object.entries(i.ratings||{}).filter(([,v])=>v>0).map(([k,v])=>esc(k)+' '+v).join(' · ');
-    const prog=(st==='watching'&&EP.includes(i.cat))?`<span>${i.cat==='manga'?'гл. ':'S'+(i.season||1)+' · '}${i.episode||0}${i.total?'/'+i.total:''}<button class="pp" onclick="bump('${i.id}')">+1</button></span>`:'';
+    const prog=(st==='watching'&&EP.includes(i.cat))?`<span>${i.cat==='manga'?'гл. ':'S'+(i.season||1)+' · '}${i.episode||0}${i.total?'/'+i.total:''}<button class="pp" onclick="bump('${i.id}')" title="Отметить следующую серию/главу">+1</button></span>`:'';
     const tags=(i.tags||'').split(',').map(t=>t.trim()).filter(Boolean).map(t=>`<span class="tg">${esc(t)}</span>`).join('');
     const gs=genresOf(i).slice(0,4).map(t=>`<span class="tg">${esc(t)}</span>`).join('');
     const w=Object.keys(i.wants||{});
@@ -46,7 +46,7 @@ function renderList(){
         ${gs||tags?`<div class="chips">${gs}${gs&&tags?'<span class="tg-sep"></span>':''}${tags}</div>`:''}
         ${i.link?`<a href="${esc(i.link)}" target="_blank" style="font-size:11px;color:var(--accent2);text-decoration:none">🔗 Открыть</a>`:''}
       </div>
-      <div class="item-actions"><button class="btn-icon" onclick="editItem('${i.id}')">${ic.edit?`<img src="${ic.edit}">`:'✏️'}</button><button class="btn-icon del" onclick="deleteItem('${i.id}')">${ic.del?`<img src="${ic.del}">`:'🗑️'}</button></div></div>`;
+      <div class="item-actions"><button class="btn-icon" onclick="editItem('${i.id}')" title="Редактировать карточку">${ic.edit?`<img src="${ic.edit}">`:'✏️'}</button><button class="btn-icon del" onclick="deleteItem('${i.id}')" title="Удалить карточку">${ic.del?`<img src="${ic.del}">`:'🗑️'}</button></div></div>`;
   }).join('');
   if(C.rgb.text&&rgbRaf)document.querySelectorAll('.item-title').forEach(el=>el.style.color=`hsl(${rgbHue},${C.rgb.sat}%,${C.rgb.light}%)`);
   selBar();
@@ -69,7 +69,7 @@ function renderTable(arr,ic){
       <div class="tcell c">${prog?`<span class="stb" onclick="event.stopPropagation();bump('${i.id}')">${prog} +1</span>`:''}</div>
       <div class="tcell genres">${gs}</div>
       <div class="tcell c">${i.coll?esc(i.coll):''}</div>
-      <div class="tcell act"><button class="btn-icon" onclick="event.stopPropagation();editItem('${i.id}')">${ic.edit?`<img src="${ic.edit}">`:'✏️'}</button><button class="btn-icon del" onclick="event.stopPropagation();deleteItem('${i.id}')">${ic.del?`<img src="${ic.del}">`:'🗑️'}</button></div>
+      <div class="tcell act"><button class="btn-icon" onclick="event.stopPropagation();editItem('${i.id}')" title="Редактировать">${ic.edit?`<img src="${ic.edit}">`:'✏️'}</button><button class="btn-icon del" onclick="event.stopPropagation();deleteItem('${i.id}')" title="Удалить">${ic.del?`<img src="${ic.del}">`:'🗑️'}</button></div>
     </div>`;
   };
   const head=`<div class="thead"><span></span><span></span><span>Название</span><span>Статус</span><span>Оценка</span><span>Год</span><span>Прогресс</span><span>Жанры</span><span>Коллекция</span><span></span></div>`;
@@ -132,12 +132,12 @@ function selBar(){
   if(!SEL.size){if(bar)bar.remove();return;}
   if(!bar){document.body.insertAdjacentHTML('beforeend','<div id="selbar" class="selbar"></div>');bar=$('selbar');}
   bar.innerHTML=`<span class="selbar-n">Выбрано: <b>${SEL.size}</b></span>
-    <button class="filter-btn" onclick="bulkStatus('watching')">▶ Смотрю</button>
-    <button class="filter-btn" onclick="bulkStatus('done')">✅ Просмотрено</button>
-    <button class="filter-btn" onclick="bulkCat()">📂 В категорию</button>
-    <button class="filter-btn" onclick="bulkArchive()">📦 Архив</button>
-    <button class="filter-btn" onclick="bulkDelete()">🗑 Удалить</button>
-    <button class="filter-btn" onclick="clearSel()">✕</button>`;
+    <button class="filter-btn" onclick="bulkStatus('watching')" title="Пометить выбранные как «Смотрю»">▶ Смотрю</button>
+    <button class="filter-btn" onclick="bulkStatus('done')" title="Пометить выбранные как «Просмотрено»">✅ Просмотрено</button>
+    <button class="filter-btn" onclick="bulkCat()" title="Переместить выбранные в другую категорию">📂 В категорию</button>
+    <button class="filter-btn" onclick="bulkArchive()" title="Архивировать/разархивировать выбранные">📦 Архив</button>
+    <button class="filter-btn" onclick="bulkDelete()" title="Удалить выбранные карточки">🗑 Удалить</button>
+    <button class="filter-btn" onclick="clearSel()" title="Очистить выбор">✕</button>`;
 }
 
 async function setStatus(id,st){const i=items[id];if(!i)return;items[id]={...i,status:st,done:st==='done'};render();beep();try{await upsertItem(items[id]);}catch(e){setSyncState('error','ошибка');}}
@@ -337,13 +337,13 @@ $('overlay').querySelector('.btn-row').insertAdjacentHTML('beforebegin',`
    <div class="field"><label>Постер (ссылка)</label><input id="fPoster" placeholder="https://… (у аниме найдётся сам)"></div>`);
 });
 uiStep(120, () => {
-document.querySelector('.toolbar').insertAdjacentHTML('beforeend',`<select class="sort-select" onchange="curStatus=this.value;render()"><option value="all">Все статусы</option>${Object.entries(ST).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select><button class="filter-btn" onclick="roulette()">🎲 Что смотрим?</button>`);
+document.querySelector('.toolbar').insertAdjacentHTML('beforeend',`<select class="sort-select" onchange="curStatus=this.value;render()"><option value="all">Все статусы</option>${Object.entries(ST).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select><button class="filter-btn" onclick="roulette()" title="Выбрать случайную карточку из «Хочу»">🎲 Что смотрим?</button>`);
 });
 uiStep(230, () => {
 $('fPoster').closest('.field').insertAdjacentHTML('afterend','<div class="field"><label>Коллекция</label><input id="fColl" placeholder="например: Ужастики на Хэллоуин"></div>');
 });
 uiStep(240, () => {
-document.querySelector('.toolbar').insertAdjacentHTML('beforeend','<select id="collSel" class="sort-select" onchange="curColl=this.value;render()"></select><button class="filter-btn" onclick="stats()">📊</button><button class="filter-btn" onclick="$(\'imp\').classList.add(\'open\')">📥</button><button class="filter-btn" onclick="fillPosters()">🔄 Дозаполнить данные</button>');
+document.querySelector('.toolbar').insertAdjacentHTML('beforeend','<select id="collSel" class="sort-select" onchange="curColl=this.value;render()"></select><button class="filter-btn" onclick="stats()" title="Показать статистику просмотренного">📊</button><button class="filter-btn" onclick="$(\'imp\').classList.add(\'open\')" title="Импортировать карточки из файла">📥</button><button class="filter-btn" onclick="fillPosters()" title="Автозаполнить постеры, описания, жанры для карточек без них">🔄 Дозаполнить данные</button>');
 });
 uiStep(260, () => {
 updColl();
@@ -358,7 +358,7 @@ uiStep(290, () => {
 $('fColl').closest('.field').insertAdjacentHTML('afterend','<div class="field"><label>Франшиза (общая для частей)</label><input id="fFr" list="frList" placeholder="Silent Hill"><datalist id="frList"></datalist></div>');
 });
 uiStep(300, () => {
-document.querySelector('.toolbar').insertAdjacentHTML('beforeend','<select id="frSel" class="sort-select" onchange="curFr=this.value;render()" style="display:none"></select><button id="fltBtn" class="filter-btn" onclick="openFlt()">🔎</button>');
+document.querySelector('.toolbar').insertAdjacentHTML('beforeend','<select id="frSel" class="sort-select" onchange="curFr=this.value;render()" style="display:none"></select><button id="fltBtn" class="filter-btn" onclick="openFlt()" title="Умные фильтры (жанры, теги, год, оценка)">🔎</button>');
 });
 uiStep(310, () => {
 document.body.insertAdjacentHTML('beforeend',`<div id="flt" class="overlay" onclick="if(event.target===this)this.classList.remove('open')"><div class="modal"><div class="modal-title">🔎 Умные фильтры</div>
@@ -366,7 +366,7 @@ document.body.insertAdjacentHTML('beforeend',`<div id="flt" class="overlay" oncl
    <div class="field"><label>Жанры</label><div class="pill-row" id="fltGenres"></div></div>
    <div class="field"><label>Теги</label><div class="pill-row" id="fltTags"></div></div>
    <div id="views" class="chips"></div>
-   <div class="btn-row"><button class="btn btn-secondary" onclick="resetFlt()">Сбросить</button><button class="btn btn-secondary" onclick="saveView()">💾 Вид</button><button class="btn btn-primary" onclick="applyFlt()">Применить</button></div></div></div>`);
+   <div class="btn-row"><button class="btn btn-secondary" onclick="resetFlt()" title="Сбросить все фильтры">Сбросить</button><button class="btn btn-secondary" onclick="saveView()" title="Сохранить текущие фильтры как вид">💾 Вид</button><button class="btn btn-primary" onclick="applyFlt()" title="Применить выбранные фильтры">Применить</button></div></div></div>`);
 });
 uiStep(320, () => {
 drawViews();
@@ -375,7 +375,7 @@ uiStep(330, () => {
 updFr();
 });
 uiStep(360, () => {
-document.querySelector('.toolbar').insertAdjacentHTML('beforeend','<button class="filter-btn" onclick="showArch=!showArch;this.style.outline=showArch?\'2px solid var(--accent)\':\'\';render()">📦</button>');
+document.querySelector('.toolbar').insertAdjacentHTML('beforeend','<button class="filter-btn" onclick="showArch=!showArch;this.style.outline=showArch?\'2px solid var(--accent)\':\'\';render()" title="Показать/скрыть карточки из архива">📦</button>');
 });
 uiStep(380, () => {
 const c=localStorage.getItem('wl_cache');
@@ -392,7 +392,8 @@ function hideHover(){const b=$('hover');if(b)b.classList.remove('show');hoverEl=
 
 function hoverShow(el){
   if(!canHover()||!el)return;
-  const i=items[el.dataset.id];if(!i)return;
+  const ds=el.dataset;if(!ds||!ds.id)return;
+  const i=items[ds.id];if(!i)return;
   let box=$('hover');
   if(!box){document.body.insertAdjacentHTML('beforeend','<div id="hover" class="hover-card"></div>');box=$('hover');}
   const gs=genresOf(i).slice(0,6).map(t=>`<span class="tg">${esc(t)}</span>`).join('');
@@ -404,9 +405,9 @@ function hoverShow(el){
       ${gs?`<div class="chips">${gs}</div>`:''}
       ${desc?`<div class="hover-desc">${esc(desc.slice(0,420))}${desc.length>420?'…':''}</div>`:''}
       <div class="hover-acts">
-        <button class="filter-btn" onclick="setStatus('${i.id}','watching')">▶ Смотрю</button>
-        <button class="filter-btn" onclick="hideHover();openInfo('${i.id}')">Открыть</button>
-        ${EP.includes(i.cat)?`<button class="filter-btn" onclick="bump('${i.id}')">+1</button>`:''}
+        <button class="filter-btn" onclick="setStatus('${i.id}','watching')" title="Пометить как «Смотрю»">▶ Смотрю</button>
+        <button class="filter-btn" onclick="hideHover();openInfo('${i.id}')" title="Открыть подробную карточку">Открыть</button>
+        ${EP.includes(i.cat)?`<button class="filter-btn" onclick="bump('${i.id}')" title="Отметить следующую серию/главу">+1</button>`:''}
       </div>
     </div>`;
   box.classList.add('show');

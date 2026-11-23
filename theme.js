@@ -76,7 +76,7 @@ ICON_LABELS.empty='Картинка пустого списка';ICON_LABELS.man
 /* ===== Сборка интерфейса этого модуля: шаги выполняются в порядке номеров (uiStep, см. util.js), номера хранят исходный порядок вставки элементов ===== */
 uiStep(140, () => {
 document.querySelector('.cp-body').insertAdjacentHTML('beforeend',`<div class="cp-page" data-page="fx">
-   <div class="cs"><div class="cs-title">Темы</div><div id="themeList" class="color-grid"></div><button class="upload-btn" onclick="saveTheme()">💾 Сохранить текущее оформление как тему</button></div><div class="sep"></div>
+   <div class="cs"><div class="cs-title">Темы</div><div id="themeList" class="color-grid"></div><button class="upload-btn" onclick="saveTheme()" title="Сохранить текущее оформление как именованную тему">💾 Сохранить текущее оформление как тему</button></div><div class="sep"></div>
    <div class="cs"><div class="cs-title">Эффекты на фоне</div>
     <select class="cp-select" id="fxType" onchange="setFx('type',this.value)"><option value="none">Нет</option><option value="sakura">🌸 Сакура</option><option value="snow">❄️ Снег</option><option value="stars">✨ Звёзды</option><option value="fireflies">🟡 Светлячки</option><option value="hearts">💗 Сердечки</option></select>
     <div class="rr"><span class="cl">Количество</span><input type="range" id="fxN" min="10" max="200" oninput="setFx('n',+this.value)"></div>
