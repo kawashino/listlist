@@ -128,6 +128,12 @@ function pickLongestDesc(list){
   return((list||[]).map(c=>cleanDesc(c&&c.desc)).sort((a,b)=>b.length-a.length)[0]||'');
 }
 
+// Добавляет категорию к поисковому запросу для источников без встроенной фильтрации по типу (Википедия и т.п.)
+function wikiQ(q,cat){
+  const s={films:' фильм',series:' сериал',games:' видеоигра',anime:' аниме',manga:' манга',ranobe:' ранобэ'}[cat]||'';
+  return s?q+' '+s:q;
+}
+
 // Оценка кандидата: точное название важнее всего, дальше — постер, описание, жанры, рейтинг
 function scoreCand(c,q){
   if(!c||!q)return 0;
@@ -184,7 +190,10 @@ function franchiseFrom(list){
 
 async function candsStd(q,cat){
   const o=cat==='anime'?['shiki','jikan','anilist','wiki']:cat==='games'?['wiki']:['itunes','wiki'];
-  const res=await Promise.allSettled(o.map(k=>SRC[k](q,cat)));
+  const res=await Promise.allSettled(o.map(k=>{
+    const wq=k==='wiki'?wikiQ(q,cat):q;
+    return SRC[k](wq,cat);
+  }));
   const out=[];
   res.forEach((r,k)=>{if(r.status==='fulfilled')(r.value||[]).forEach(x=>out.push({...x,_src:o[k]}));});
   return out.filter(x=>x&&x.title);
