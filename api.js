@@ -149,6 +149,19 @@ async function upsertItem(item) {
   const old = SNAP[item.id] ? JSON.parse(SNAP[item.id]) : null;
   const d = old ? diffBody(old, body) : body;
   if (old && !Object.keys(d).length) return;
+  try {
+    if (!old) {
+      await sbFetch('/items', {
+        method: 'POST',
+        headers: { 'Prefer': 'resolution=merge-duplicates' },
+        body: JSON.stringify(d)
+      });
+    } else {
+      await sbFetch('/items?id=eq.' + encodeURIComponent(item.id), { method: 'PATCH', body: JSON.stringify(d) });
+    }
+  } catch (e) {
+    // Retry once after 2s
+    await sleep(2000);
     try {
       if (!old) {
         await sbFetch('/items', {
@@ -159,11 +172,12 @@ async function upsertItem(item) {
       } else {
         await sbFetch('/items?id=eq.' + encodeURIComponent(item.id), { method: 'PATCH', body: JSON.stringify(d) });
       }
-    } catch (e) {
+    } catch (e2) {
       outboxAdd(old
         ? { path: '/items?id=eq.' + encodeURIComponent(item.id), method: 'PATCH', body: JSON.stringify(d) }
         : { path: '/items', method: 'POST', headers: { 'Prefer': 'resolution=merge-duplicates' }, body: JSON.stringify(d) });
     }
+  }
     SNAP[item.id] = JSON.stringify(body);
     try { localStorage.setItem('wl_cache', JSON.stringify(items)); } catch (e) {}
 }

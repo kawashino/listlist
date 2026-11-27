@@ -59,6 +59,7 @@ async function submitPassword() {
 // ===== ОФЛАЙН-ОЧЕРЕДЬ ПИСАТЕЛЕЙ (в api.js) =====
 
 window.addEventListener('load', () => {
+  let searchT;
   loadCustom();
 
   // без config.js работать нечем: показываем подсказку и не идём дальше
@@ -70,7 +71,7 @@ window.addEventListener('load', () => {
 
   document.getElementById('passwordInput').addEventListener('keydown', e => { if(e.key==='Enter') submitPassword(); });
   document.getElementById('inputTitle').addEventListener('keydown', e => { if(e.key==='Enter') saveItem(); });
-  document.getElementById('searchInput').addEventListener('input', e => { searchQuery=e.target.value.toLowerCase(); render(); });
+  document.getElementById('searchInput').addEventListener('input', e => { clearTimeout(searchT); searchT=setTimeout(()=>{searchQuery=e.target.value.toLowerCase(); render();},200); });
   initBgPosPad();
   renderIconPreviews();
   renderCustomCatList();
