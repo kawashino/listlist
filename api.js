@@ -113,6 +113,15 @@ const SNAP = {};
 let isLoading = true;
 
 async function loadAllItems() {
+  // Показать кэш сразу, чтобы карточки не ждали ответа сервера
+  const cached = localStorage.getItem('wl_cache');
+  if (cached) {
+    try {
+      items = JSON.parse(cached);
+      isLoading = false;
+      if (typeof render === 'function') render();
+    } catch (e) {}
+  }
   try {
     const rows = await Promise.race([sbFetch('/items?select=*&order=ts.desc'), new Promise((_, no) => setTimeout(() => no(new Error('сервер не отвечает')), 12000))]);
     items = {};
@@ -121,14 +130,17 @@ async function loadAllItems() {
     STAT.fetch = Date.now();
     localStorage.setItem('wl_cache', JSON.stringify(items));
   } catch(e) {
-    const c = localStorage.getItem('wl_cache');
-    if (!c) throw e;
-    items = JSON.parse(c);
-    setSyncState('error', 'офлайн');
+    if (!cached) {
+      const c = localStorage.getItem('wl_cache');
+      if (!c) throw e;
+      items = JSON.parse(c);
+      setSyncState('error', 'офлайн');
+    }
   } finally {
     isLoading = false;
   }
   Object.values(items).forEach(i => SNAP[i.id] = JSON.stringify(i));
+  if (typeof render === 'function') render();
 }
 
 async function upsertItem(item) {
@@ -138,22 +150,23 @@ async function upsertItem(item) {
   const old = SNAP[item.id] ? JSON.parse(SNAP[item.id]) : null;
   const d = old ? diffBody(old, body) : body;
   if (old && !Object.keys(d).length) return;
-  try {
-    if (!old) {
-      await sbFetch('/items', {
-        method: 'POST',
-        headers: { 'Prefer': 'resolution=merge-duplicates' },
-        body: JSON.stringify(d)
-      });
-    } else {
-      await sbFetch('/items?id=eq.' + encodeURIComponent(item.id), { method: 'PATCH', body: JSON.stringify(d) });
+    try {
+      if (!old) {
+        await sbFetch('/items', {
+          method: 'POST',
+          headers: { 'Prefer': 'resolution=merge-duplicates' },
+          body: JSON.stringify(d)
+        });
+      } else {
+        await sbFetch('/items?id=eq.' + encodeURIComponent(item.id), { method: 'PATCH', body: JSON.stringify(d) });
+      }
+    } catch (e) {
+      outboxAdd(old
+        ? { path: '/items?id=eq.' + encodeURIComponent(item.id), method: 'PATCH', body: JSON.stringify(d) }
+        : { path: '/items', method: 'POST', headers: { 'Prefer': 'resolution=merge-duplicates' }, body: JSON.stringify(d) });
     }
-  } catch (e) {
-    outboxAdd(old
-      ? { path: '/items?id=eq.' + encodeURIComponent(item.id), method: 'PATCH', body: JSON.stringify(d) }
-      : { path: '/items', method: 'POST', headers: { 'Prefer': 'resolution=merge-duplicates' }, body: JSON.stringify(d) });
-  }
-  SNAP[item.id] = JSON.stringify(body);
+    SNAP[item.id] = JSON.stringify(body);
+    try { localStorage.setItem('wl_cache', JSON.stringify(items)); } catch (e) {}
 }
 
 function diffBody(old, body) {
@@ -170,6 +183,7 @@ async function deleteItemDb(id) {
     outboxAdd({ path: `/items?id=eq.${encodeURIComponent(id)}`, method: 'DELETE' });
   }
   delete SNAP[id];
+  try { localStorage.setItem('wl_cache', JSON.stringify(items)); } catch (e) {}
 }
 
 // ===== КОММЕНТАРИИ, РЕАКЦИИ, «ХОЧУ» =====

@@ -213,12 +213,14 @@ async function saveItem(){
     franchise:$('fFr').value.trim()||(_pick&&_pick.franchise)||'',
     ...(_pick?{info:{ts:1,year:_pick.year||'',genres,desc:_pick.desc||'',score:_pick.score||'',trailer:_pick.trailer||'',franchise:_pick.franchise||'',upd:Date.now()}}:{})};
   items[item.id]=item;render();closeModal();
+  try{localStorage.setItem('wl_cache',JSON.stringify(items));}catch(e){}
   try{await upsertItem(item);setSyncState('live','сохранено');}catch(e){setSyncState('error','ошибка сохранения');}
   btn.disabled=false;btn.textContent='Сохранить';
 }
 
 async function deleteItem(id){
   const i=items[id];if(!i)return;delete items[id];render();
+  try{localStorage.setItem('wl_cache',JSON.stringify(items));}catch(e){}
   try{await deleteItemDb(id);}catch(e){}
   toast('Удалено: '+i.title,async()=>{items[id]=i;render();try{await upsertItem(i);}catch(e){}});
 }
