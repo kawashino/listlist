@@ -19,7 +19,18 @@ window.addEventListener('load',()=>{
   runUiSteps();   // вставка полей, кнопок и панелей: шаги лежат в модулях, порядок задают их номера
 });
 
-// ===== ЦЕНТРАЛИЗОВАННЫЙ ОБРАБОТЧИК ОШИБОК =====
+// ===== ОФЛАЙН-ИНДИКАТОР =====
+function updateOnlineStatus() {
+  if (!navigator.onLine) {
+    setSyncState('error', 'офлайн');
+    toast('Нет соединения — работа в офлайн-режиме');
+  } else {
+    setSyncState('live', 'онлайн');
+    outboxFlush();
+  }
+}
+window.addEventListener('online', updateOnlineStatus);
+window.addEventListener('offline', updateOnlineStatus);
 // Ловит ошибки, которые терялись в пустых catch-блоках по всем модулям.
 // Показывает toast вместо молчаливого падения, не прерывая работу приложения.
 window.addEventListener('unhandledrejection', e => {

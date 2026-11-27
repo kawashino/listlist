@@ -210,7 +210,8 @@ function applyRemoteExtra(table, type, rec, old) {
   render();
 }
 
-// ===== REALTIME =====
+// ===== СОСТОЯНИЕ СИНХРОНИЗАЦИИ =====
+const STAT = { fetch: 0, rt: '', rtAt: 0 };
 let lastLocalWrite = 0, rtTimer = null, rtRetry = 0;
 function applyRemote(type, rec, old) {
   if (type === 'DELETE') { const id = (old && old.id) || (rec && rec.id); if (id) { delete items[id]; delete SNAP[id]; } }
@@ -244,6 +245,7 @@ function startRealtime() {
   ws.onerror = () => { STAT.rt = 'ошибка'; setSyncState('error', 'ошибка соединения'); };
   ws.onclose = () => {
     STAT.rt = 'переподключение'; realtimeChannel = null; clearInterval(rtTimer);
+    setSyncState('error', 'переподключение...');
     const delay = Math.min(30000, 1000 * Math.pow(2, rtRetry++));
     setTimeout(startRealtime, delay + Math.random() * 400);
   };

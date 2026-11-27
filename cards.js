@@ -38,7 +38,7 @@ function renderList(){
     const w=Object.keys(i.wants||{});
     return `<div class="item cat-${i.cat.replace(/^cat_/,'custom')} st-${st}${w.length>1?' both':''}${SEL.has(i.id)?' sel':''}" data-id="${i.id}" data-title="${esc(i.title)}" tabindex="0" role="button" aria-label="${esc(i.title)}">
       <label class="tsel" onclick="event.stopPropagation()" title="Выбрать"><input type="checkbox" ${SEL.has(i.id)?'checked':''} onchange="toggleSel('${i.id}')"></label>
-      ${i.poster?`<img class="poster" loading="lazy" src="${esc(i.poster)}" onerror="this.remove()">`:''}
+      ${i.poster?`<img class="poster" loading="lazy" src="${esc(i.poster)}" alt="${esc(i.title)}" onerror="this.remove()">`:''}
       <div class="check" onclick="toggleDone('${i.id}')">${st==='done'?(ic.check?`<img src="${ic.check}">`:'✓'):''}</div>
       <div class="item-body"><div class="item-title" style="cursor:pointer" onclick="openInfo('${i.id}')">${esc(i.title)}</div>
         ${i.note?`<div class="item-meta">${esc(i.note)}</div>`:''}
@@ -61,7 +61,7 @@ function renderTable(arr,ic){
     const gs=genresOf(i).slice(0,3).map(t=>`<span class="tg">${esc(t)}</span>`).join('');
     return `<div class="trow${i.done?' done':''}${SEL.has(i.id)?' sel':''}" data-id="${i.id}" data-title="${esc(i.title)}" onclick="rowClick(event,'${i.id}')">
       <label class="tsel" onclick="event.stopPropagation()" title="Выбрать"><input type="checkbox" ${SEL.has(i.id)?'checked':''} onchange="toggleSel('${i.id}')"></label>
-      ${i.poster?`<img class="poster" loading="lazy" src="${esc(i.poster)}" onerror="this.style.visibility='hidden'">`:'<span class="poster ph"></span>'}
+      ${i.poster?`<img class="poster" loading="lazy" src="${esc(i.poster)}" alt="${esc(i.title)}" onerror="this.style.visibility='hidden'">`:'<span class="poster ph"></span>'}
       <div class="tcell title"><span class="item-title">${esc(i.title)}</span>${i.note?`<small class="item-meta">${esc(i.note)}</small>`:''}</div>
       <div class="tcell"><span class="stb" onclick="event.stopPropagation();cycleStatus('${i.id}')">${ST[st]}</span></div>
       <div class="tcell c">${score?`<span class="rt">⭐ ${esc(score)}</span>`:''}</div>
@@ -204,7 +204,7 @@ async function saveItem(){
   const ratings={...(old&&old.ratings||{})};if(rate>0)ratings[ME]=rate;else delete ratings[ME];
   const btn=$('saveBtn');btn.disabled=true;btn.textContent='Сохраняем...';
   let poster=poster0;
-  if(!poster){try{poster=await findPoster(title,cat);}catch(e){poster='';}}
+  if(!poster){try{poster=await findPoster(title,cat);}catch(e){poster='';} if(!poster)toast('Постер не найден — добавьте вручную');}
   const base=old||{id:Date.now().toString(36)+Math.random().toString(36).slice(2,6),ts:Date.now(),added_by:ME};
   const genres=_pick&&_pick.genres?_pick.genres:[];
   const item={...base,cat,title,note:$('inputNote').value.trim(),link:$('inputLink').value.trim(),status:st,done:st==='done',
@@ -400,7 +400,7 @@ function hoverShow(el){
   if(!box){document.body.insertAdjacentHTML('beforeend','<div id="hover" class="hover-card"></div>');box=$('hover');}
   const gs=genresOf(i).slice(0,6).map(t=>`<span class="tg">${esc(t)}</span>`).join('');
   const desc=cleanDesc(i.info&&i.info.desc||'');
-  box.innerHTML=`${i.poster?`<img class="hover-poster" src="${esc(i.poster)}" onerror="this.remove()">`:''}
+  box.innerHTML=`${i.poster?`<img class="hover-poster" src="${esc(i.poster)}" alt="${esc(i.title)}" onerror="this.remove()">`:''}
     <div class="hover-body">
       <div class="hover-title">${esc(i.title)}</div>
       <div class="hover-meta">${[i.info&&i.info.year,i.info&&i.info.score?'⭐ '+esc(i.info.score):'',i.total?i.total+' эп.':''].filter(Boolean).join(' · ')}</div>
