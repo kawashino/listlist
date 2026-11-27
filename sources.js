@@ -400,8 +400,7 @@ function slugTitle(u){   // читаемое название из адреса,
 async function resolveTitleLink(){   // вызывается перед сохранением карточки из формы
   const v=$('inputTitle').value.trim();if(!isUrl(v)||_pick)return;
   if(!$('inputLink').value)$('inputLink').value=v;
-  const c=await linkCands(v);
-  if(c.length){window._cs=c;takePick(0);}
+  try{const c=await linkCands(v);if(c.length){window._cs=c;takePick(0);}}catch(e){}
   if(isUrl($('inputTitle').value))$('inputTitle').value=slugTitle(v);
 }
 async function repairLinkTitles(){   // уже сохранённые карточки, где вместо названия осталась ссылка

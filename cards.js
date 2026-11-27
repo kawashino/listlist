@@ -181,7 +181,7 @@ function validateItemForm({ title, link, poster, cat, id }) {
 }
 
 async function saveItem(){
-  await resolveTitleLink();
+  try{await resolveTitleLink();}catch(e){}
   let title=$('inputTitle').value.trim();
   const link=$('inputLink').value.trim();
   let poster0=$('fPoster').value.trim();
@@ -204,7 +204,7 @@ async function saveItem(){
   const ratings={...(old&&old.ratings||{})};if(rate>0)ratings[ME]=rate;else delete ratings[ME];
   const btn=$('saveBtn');btn.disabled=true;btn.textContent='Сохраняем...';
   let poster=poster0;
-  if(!poster)poster=await findPoster(title,cat);
+  if(!poster){try{poster=await findPoster(title,cat);}catch(e){poster='';}}
   const base=old||{id:Date.now().toString(36)+Math.random().toString(36).slice(2,6),ts:Date.now(),added_by:ME};
   const genres=_pick&&_pick.genres?_pick.genres:[];
   const item={...base,cat,title,note:$('inputNote').value.trim(),link:$('inputLink').value.trim(),status:st,done:st==='done',
