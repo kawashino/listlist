@@ -140,7 +140,6 @@ async function loadAllItems() {
     isLoading = false;
   }
   Object.values(items).forEach(i => SNAP[i.id] = JSON.stringify(i));
-  if (typeof render === 'function') render();
 }
 
 async function upsertItem(item) {
@@ -207,6 +206,7 @@ function applyRemoteExtra(table, type, rec, old) {
   if (table === 'item_wants') { i.wants = { ...(i.wants || {}) }; if (type === 'DELETE') delete i.wants[r.author]; else i.wants[r.author] = 1; }
   else if (table === 'item_reacts') { i.reacts = { ...(i.reacts || {}) }; const a = new Set(i.reacts[r.emoji] || []); if (type === 'DELETE') a.delete(r.author); else a.add(r.author); i.reacts[r.emoji] = [...a]; }
   else if (table === 'item_comments') { i.comments = (i.comments || []).filter(c => c.id !== r.id); if (type !== 'DELETE') i.comments.push({ by: r.author, text: r.body, ts: r.ts, id: r.id }); i.comments.sort((a, b) => a.ts - b.ts); }
+  try { localStorage.setItem('wl_cache', JSON.stringify(items)); } catch (e) {}
   render();
 }
 
@@ -215,6 +215,7 @@ let lastLocalWrite = 0, rtTimer = null, rtRetry = 0;
 function applyRemote(type, rec, old) {
   if (type === 'DELETE') { const id = (old && old.id) || (rec && rec.id); if (id) { delete items[id]; delete SNAP[id]; } }
   else if (rec && rec.id) { const p = items[rec.id] || {}; items[rec.id] = extrasOn ? { ...rec, wants: p.wants || {}, reacts: p.reacts || {}, comments: p.comments || [] } : rec; SNAP[rec.id] = JSON.stringify(rec); }
+  try { localStorage.setItem('wl_cache', JSON.stringify(items)); } catch (e) {}
   render();
 }
 function startRealtime() {

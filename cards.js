@@ -238,7 +238,7 @@ function toggleWant(id){
   (had?xtDel('item_wants',`item_id=eq.${encodeURIComponent(id)}&author=eq.${encodeURIComponent(ME)}`):xtAdd('item_wants',{item_id:id,author:ME})).catch(()=>setSyncState('error','ошибка'));
 }
 
-let _pick=null,sugT,curFr='all',SF={};
+let _pick=null,sugT,curFr='all',SF=(()=>{try{return JSON.parse(localStorage.getItem('wl_sf')||'{}');}catch(e){return {};}})();
 
 function frProg(f){const a=Object.values(items).filter(i=>i.franchise===f);return a.filter(i=>sOf(i)==='done').length+'/'+a.length;}
 
@@ -262,7 +262,7 @@ function readFlt(){SF={r:+$('sfR').value||0,y1:+$('sfY1').value||0,y2:+$('sfY2')
 
 function writeFlt(){$('sfR').value=SF.r||'';$('sfY1').value=SF.y1||'';$('sfY2').value=SF.y2||'';$('sfG').value=(SF.g||[]).join(', ');$('sfT').value=(SF.t||[]).join(', ');}
 
-function applyFlt(){readFlt();$('flt').classList.remove('open');render();$('fltBtn').style.outline=(SF.r||SF.y1||SF.y2||(SF.g&&SF.g.length)||(SF.t&&SF.t.length))?'2px solid var(--accent)':'';}
+function applyFlt(){readFlt();$('flt').classList.remove('open');render();$('fltBtn').style.outline=(SF.r||SF.y1||SF.y2||(SF.g&&SF.g.length)||(SF.t&&SF.t.length))?'2px solid var(--accent)':'';try{localStorage.setItem('wl_sf',JSON.stringify(SF));}catch(e){}}
 
 function resetFlt(){SF={};writeFlt();applyFlt();}
 
