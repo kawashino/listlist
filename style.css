@@ -445,3 +445,139 @@ body.split .cp-tabs{display:none!important}
 .sync-dot{width:8px;height:8px;border-radius:50%;background:#fff;box-shadow:0 0 8px #fff}
 .sync-dot.loading{background:var(--text3);animation:pulse 1.5s infinite}
 @keyframes pulse{0%,100%{opacity:.6}50%{opacity:1}}
+
+/* ===== ВИЗУАЛЬНЫЕ УЛУЧШЕНИЯ ===== */
+
+/* Hover-эффект карточки */
+.item, .trow {
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+.item:hover, .trow:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+  border-color: var(--accent);
+}
+
+/* Анимация появления карточек */
+@keyframes cardAppear {
+  from { opacity: 0; transform: translateY(12px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.item, .trow {
+  animation: cardAppear 0.3s ease both;
+}
+
+/* Анимация удаления карточки */
+@keyframes cardRemove {
+  to { opacity: 0; transform: scale(0.9) translateY(8px); }
+}
+.item.removing, .trow.removing {
+  animation: cardRemove 0.25s ease forwards;
+  pointer-events: none;
+}
+
+/* Toast: slide-in снизу */
+@keyframes toastIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.toast {
+  animation: toastIn 0.3s ease;
+}
+
+/* Переключение статуса */
+.stb {
+  transition: background-color 0.3s ease, color 0.3s ease, transform 0.15s ease;
+}
+.stb:active {
+  transform: scale(0.92);
+}
+
+/* Постер с градиентом снизу */
+.item .poster {
+  position: relative;
+}
+.item .poster::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 40%;
+  background: linear-gradient(to top, rgba(0,0,0,0.6), transparent);
+  pointer-events: none;
+}
+
+/* Размытие фона при модальном окне */
+.overlay.open ~ #bgLayer {
+  filter: blur(8px);
+  transition: filter 0.3s ease;
+}
+#bgLayer {
+  transition: filter 0.3s ease;
+}
+
+/* FAB анимация */
+@keyframes fabIn {
+  from { opacity: 0; transform: scale(0.5) rotate(-90deg); }
+  to { opacity: 1; transform: scale(1) rotate(0); }
+}
+.fab {
+  animation: fabIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) 0.5s both;
+}
+
+/* Скелетон-загрузка */
+@keyframes skeletonPulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.8; }
+}
+.sk {
+  animation: skeletonPulse 1.5s ease-in-out infinite;
+  border-radius: var(--border-radius);
+}
+
+/* Пустое состояние */
+.empty {
+  animation: cardAppear 0.4s ease;
+}
+.empty-icon {
+  font-size: 48px;
+  margin-bottom: 8px;
+  opacity: 0.6;
+}
+
+/* Модальное окно backdrop-blur */
+.overlay {
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  transition: backdrop-filter 0.3s ease;
+}
+
+/* Hover-превью */
+.hover-card {
+  animation: cardAppear 0.2s ease;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+/* Кнопка +1 анимация */
+@keyframes bumpUp {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.3); }
+  100% { transform: scale(1); }
+}
+.pp:active {
+  animation: bumpUp 0.3s ease;
+}
+
+/* Табы */
+.tab {
+  transition: background 0.2s ease, color 0.2s ease, transform 0.15s ease;
+}
+.tab:active {
+  transform: scale(0.95);
+}
+
+/* Плавный переход темы */
+body {
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
