@@ -188,10 +188,6 @@ async function saveItem(){
   const cat=$('inputCat').value||currentTab;
   const problem=validateItemForm({title,link,poster:poster0,cat,id:editingId});
   if(problem){ if(problem==='__cancel__')return; toast(problem); $('inputTitle').focus(); return; }
-  // Валидация URL постера
-  if(poster0 && !/^https?:\/\/.+\.(jpg|jpeg|png|gif|webp|svg)(\?.*)?$/i.test(poster0) && !poster0.startsWith('data:')){
-    toast('URL постера выглядит некорректно'); $('fPoster').focus(); return;
-  }
 
   // Высокий приоритет: распознать по ссылке (Steam, Википедия, Shikimori, IMDb и т.п.)
   let linkInfo=null;
